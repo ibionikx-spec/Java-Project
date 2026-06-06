@@ -30,8 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="Series")
-@Getter
+@Table(name = "series")
 @Setter
 @Builder
 @NoArgsConstructor
