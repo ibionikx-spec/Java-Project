@@ -11,8 +11,7 @@ import lombok.Setter;
 import lombok.EqualsAndHashCode;
 
 @Entity
-@Table(name = "Status")
-@Getter
+@Table(name = "statuses")
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Status {
