@@ -11,8 +11,7 @@ import lombok.Setter;
 import lombok.EqualsAndHashCode;
 
 @Entity
-@Table(name = "PublicationType")
-@Getter
+@Table(name = "publication_types")
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class PublicationType {
