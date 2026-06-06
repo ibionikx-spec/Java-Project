@@ -9,12 +9,11 @@ import java.util.List;
 
 @Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class LoginRes {
+@NoArgsConstructor
+public class UserInfoRes {
     private Long id;
     private String fullName;
     private String email;
     private List<String> roles;
-    private String message;
 }
