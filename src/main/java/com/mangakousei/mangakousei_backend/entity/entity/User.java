@@ -22,7 +22,6 @@ import com.mangakousei.mangakousei_backend.entity.system.Role;
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
