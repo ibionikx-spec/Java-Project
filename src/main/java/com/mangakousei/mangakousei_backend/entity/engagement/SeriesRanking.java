@@ -1,4 +1,4 @@
-package com.mangakousei.mangakousei_backend.entity;
+package com.mangakousei.mangakousei_backend.entity.engagement;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,8 +19,10 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.mangakousei.mangakousei_backend.entity.entity.Series;
+
 @Entity
-@Table(name = "SeriesRanking")
+@Table(name = "series_ranking")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -54,4 +57,9 @@ public class SeriesRanking {
 
     @Column(name = "calculated_at", nullable = false)
     private LocalDateTime calculatedAt;
+    
+    @PrePersist
+    protected void onCalculated() {
+        this.calculatedAt = LocalDateTime.now();
+    }
 }

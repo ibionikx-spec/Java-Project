@@ -1,12 +1,13 @@
-package com.mangakousei.mangakousei_backend.entity;
+package com.mangakousei.mangakousei_backend.entity.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.mangakousei.mangakousei_backend.entity.type.DecisionType;
+
 import jakarta.persistence.*;
-import jakarta.persistence.FetchType;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "PublicationDecisions")
+@Table(name = "publication_decisions")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,16 +32,17 @@ public class PublicationDecision {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "series_id", nullable = false)
-    @JsonBackReference("publicationDecisions")
+    @JsonBackReference("publicationSeriesDecisions")
     @ToString.Exclude
     private Series series;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonBackReference("publicationUserDecisions")
     @JoinColumn(name = "decided_by")
     private User decider;
 
     @PrePersist
-    protected void decidedOn(){
+    protected void onDecided(){
         this.decidedAt = LocalDateTime.now();
     }
 }

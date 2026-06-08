@@ -1,6 +1,6 @@
 package com.mangakousei.mangakousei_backend.security;
 
-import com.mangakousei.mangakousei_backend.entity.User;
+import com.mangakousei.mangakousei_backend.entity.entity.User;
 import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;

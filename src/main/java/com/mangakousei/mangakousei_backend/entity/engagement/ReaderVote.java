@@ -1,8 +1,9 @@
-package com.mangakousei.mangakousei_backend.entity;
+package com.mangakousei.mangakousei_backend.entity.engagement;
 
 import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.mangakousei.mangakousei_backend.entity.entity.Series;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +19,7 @@ import lombok.Setter;
 import lombok.ToString;
 import jakarta.persistence.FetchType;
 @Entity
-@Table(name = "ReaderVote")
+@Table(name = "reader_vote")
 @Getter @Setter @NoArgsConstructor
 public class ReaderVote {
     @Id

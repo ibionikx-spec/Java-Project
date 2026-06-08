@@ -1,4 +1,4 @@
-package com.mangakousei.mangakousei_backend.entity;
+package com.mangakousei.mangakousei_backend.entity.type;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -7,12 +7,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 
 @Entity
 @Table(name = "publication_types")
-@Setter
+@Setter @Getter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class PublicationType {
     @Id

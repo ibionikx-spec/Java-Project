@@ -1,6 +1,9 @@
-package com.mangakousei.mangakousei_backend.entity;
+package com.mangakousei.mangakousei_backend.entity.entity;
+
+import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.mangakousei.mangakousei_backend.entity.system.NotificationType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,17 +13,21 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Entity
 @Table(name = "notifications")
-@Setter
+@Setter @Getter @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString
+@ToString 
 public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,11 +35,9 @@ public class Notification {
     @EqualsAndHashCode.Include
     private Long notificationId;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonBackReference("notifications")
-    @ToString.Exclude
     private User user;
 
     @Column(name = "title", nullable = false,length = 255)
@@ -43,6 +48,13 @@ public class Notification {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "notification_type_id", nullable = false)
-    @ToString.Exclude
     private NotificationType notificationType;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreated(){
+        this.createdAt = LocalDateTime.now();
+    }
 }
