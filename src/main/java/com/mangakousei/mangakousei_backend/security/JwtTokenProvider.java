@@ -77,6 +77,7 @@ public class JwtTokenProvider {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("token_type", "refresh");
+        claims.put("rememberMe", isRememberMe);
 
         return buildToken(user.getUsername(), claims, expirationMs);
     }
@@ -108,11 +109,7 @@ public class JwtTokenProvider {
     }
 
     public String getEmailFromToken(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(getKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        Claims claims = extractAllClaims(token);
 
         return claims.getSubject();
     }
@@ -136,12 +133,29 @@ public class JwtTokenProvider {
         return false;
     }
 
-    public long getExpirationRemaining(String token) {
-        Claims claims = Jwts.parser()
+    public Claims extractAllClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(getKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public Claims extractClaimsEvenIfExpired(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(getKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
+        }
+    }
+
+    public long getExpirationRemaining(String token) {
+        Claims claims = extractAllClaims(token);
+
         return claims.getExpiration().getTime() - System.currentTimeMillis();
     }
 }
