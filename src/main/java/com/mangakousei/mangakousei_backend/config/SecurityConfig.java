@@ -60,6 +60,7 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
+                                "/api/genres",
                                 "/api/public/**"
                         ).permitAll()
                         .anyRequest().authenticated()
