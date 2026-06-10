@@ -34,6 +34,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 userEntity.getEmail(),
                 userEntity.getPasswordHash(),
                 userEntity.getFullName(),
+                userEntity.getAvatarUrl(),
                 authorities
         );
     }

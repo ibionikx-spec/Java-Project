@@ -13,6 +13,7 @@ public class CustomUserDetails implements UserDetails {
     private final String email;
     private final String password;
     private final String fullName;
+    private final String avatarUrl;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(
@@ -20,12 +21,14 @@ public class CustomUserDetails implements UserDetails {
             String email,
             String password,
             String fullName,
+            String avatarUrl,
             Collection<? extends GrantedAuthority> authorities
     ) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.fullName = fullName;
+        this.avatarUrl = avatarUrl;
         this.authorities = authorities;
     }
 

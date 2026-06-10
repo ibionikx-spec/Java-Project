@@ -11,13 +11,12 @@ import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import com.mangakousei.mangakousei_backend.security.CustomUserDetails;
 import com.mangakousei.mangakousei_backend.security.CustomUserDetailsService;
 import com.mangakousei.mangakousei_backend.security.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -38,6 +37,7 @@ public class AuthService {
     private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CookieService cookieService;
 
     public LoginRes login(LoginReq request, HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
@@ -57,24 +57,7 @@ public class AuthService {
         // 7 ngay va 1 ngay
         long refreshMaxAge = request.isRememberMe() ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
 
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(60 * 15)
-                .sameSite("Lax")
-                .build();
-
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true)
-                .secure(false)
-                .path("/api/auth/refresh")
-                .maxAge(refreshMaxAge)
-                .sameSite("Lax")
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        cookieService.setAuthBothCookies(response, accessToken, refreshToken, refreshMaxAge);
 
         return LoginRes.builder()
                 .id(userDetails.getId())
@@ -83,6 +66,7 @@ public class AuthService {
                 .roles(userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList()))
+                .avatarUrl(userDetails.getAvatarUrl())
                 .message("Login successful")
                 .build();
     }
@@ -103,14 +87,7 @@ public class AuthService {
         }
 
         if (!jwtTokenProvider.validateToken(refreshToken)) {
-            ResponseCookie deleteRefreshCookie = ResponseCookie.from("refreshToken", "")
-                    .httpOnly(true)
-                    .secure(false)
-                    .path("/api/auth/refresh")
-                    .maxAge(0)
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, deleteRefreshCookie.toString());
+            cookieService.clearAuthCookies(response, refreshToken);
             throw new CustomAppException("Login session has expired, please log in again!", HttpStatus.UNAUTHORIZED);
         }
 
@@ -126,17 +103,16 @@ public class AuthService {
                 null,
                 userDetails.getAuthorities()
         );
+
+        // 7 ngay va 1 ngay
+        Claims claims = jwtTokenProvider.extractClaimsEvenIfExpired(refreshToken);
+        boolean isRememberMe = claims.get("rememberMe") != null && (boolean) claims.get("rememberMe");
+        long refreshMaxAge = isRememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
+
         String newAccessToken = jwtTokenProvider.generateAccessToken(authentication);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(authentication, isRememberMe);
 
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", newAccessToken)
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(60 * 15)
-                .sameSite("Lax")
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        cookieService.setAuthBothCookies(response, newAccessToken, newRefreshToken, refreshMaxAge);
 
         return LoginRes.builder()
                 .id(customUser.getId())
@@ -190,25 +166,11 @@ public class AuthService {
                 .roles(userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList()))
+                .avatarUrl(userDetails.getAvatarUrl())
                 .build();
     }
 
     public void logout(HttpServletResponse response) {
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", "")
-                .httpOnly(true)
-                .path("/")
-                .maxAge(0)
-                .sameSite("Lax")
-                .build();
-
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", "")
-                .httpOnly(true)
-                .path("/api/auth/refresh")
-                .maxAge(0)
-                .sameSite("Lax")
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        cookieService.clearAuthCookies(response);
     }
 }

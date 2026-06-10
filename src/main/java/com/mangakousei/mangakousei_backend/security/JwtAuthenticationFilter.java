@@ -33,16 +33,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
         try {
             String token = null;
+            String refreshToken = null;
             if (request.getCookies() != null) {
                 for (Cookie cookie : request.getCookies()) {
                     if ("accessToken".equals(cookie.getName())) {
                         token = cookie.getValue();
-                        break;
+                    } else if ("refreshToken".equals(cookie.getName())) {
+                        refreshToken = cookie.getValue();
                     }
                 }
             }
 
-            if (token != null && tokenProvider.validateToken(token)) {
+            if (token == null) {
+                if (refreshToken == null) {
+                    request.setAttribute("auth_error", "NO_TOKEN");
+                } else {
+                    request.setAttribute("auth_error", "TOKEN_EXPIRED");
+                }
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            if (!tokenProvider.validateToken(refreshToken)) {
+                request.setAttribute("auth_error", "NO_TOKEN");
+
+                Cookie accessCookie = new Cookie("accessToken", null);
+                accessCookie.setMaxAge(0);
+                accessCookie.setPath("/");
+                response.addCookie(accessCookie);
+
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            if (tokenProvider.validateToken(token)) {
                 String email = tokenProvider.getEmailFromToken(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
@@ -55,6 +79,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             log.error("Cannot set user authentication: {}", e.getMessage());
+
+            request.setAttribute("auth_error", "TOKEN_INVALID");
+            filterChain.doFilter(request, response);
+            return;
         }
 
         filterChain.doFilter(request, response);
