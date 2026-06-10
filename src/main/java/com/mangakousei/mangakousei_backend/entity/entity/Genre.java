@@ -26,5 +26,6 @@ public class Genre{
     private String genreName;
 
     @OneToMany(mappedBy = "genre", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<ProposalGenre> proposalGenres = new ArrayList<>();
 }
