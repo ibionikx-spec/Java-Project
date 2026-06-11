@@ -62,6 +62,7 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/genres",
                                 "/api/proposals",
+                                "/api/tantou/**",
                                 "/api/public/**"
                         ).permitAll()
                         .anyRequest().authenticated()
