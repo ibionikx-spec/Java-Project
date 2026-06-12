@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.mangakousei.mangakousei_backend.entity.status.ManuscriptStatus;
 
+import com.mangakousei.mangakousei_backend.entity.type.ManuscriptType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import jakarta.persistence.Column;
@@ -60,6 +61,10 @@ public class Manuscript {
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manuscript_type_id")
+    private ManuscriptType manuscriptType;
 
     @PrePersist
     protected void onSubmitted(){

@@ -11,7 +11,8 @@ public class CookieService {
     private final boolean isSecure = false;
     private final String sameSite = "Lax";
     private final String accessTokenPath = "/";
-    private final String refreshTokenPath = "/api/auth/refresh";
+    private final String refreshTokenPath = "/";
+//    private final String refreshTokenPath = "/api/auth/refresh";
 
     private ResponseCookie buildCookie(String name, String value, String path, long maxAge) {
         return ResponseCookie.from(name, value)

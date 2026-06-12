@@ -19,11 +19,11 @@ import lombok.EqualsAndHashCode;
 public class ManuscriptStatus{
     @Id
     @GeneratedValue(strategy =  GenerationType.IDENTITY)
-    @Column(name = "manuscript_type_id")
+    @Column(name = "manuscript_status_id")
     @EqualsAndHashCode.Include
     private Long manuscriptTypeId;
 
     @Column(name = "manuscript_name",nullable = false, unique = true)
-    private String manuscriptTypeName;
+    private String manuscriptName;
 
 }

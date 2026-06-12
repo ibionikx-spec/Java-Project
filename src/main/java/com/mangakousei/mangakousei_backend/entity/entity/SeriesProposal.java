@@ -67,15 +67,18 @@ public class SeriesProposal {
 
     @OneToMany(mappedBy = "proposal", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference("ProposalGenres")
+    @Builder.Default
     private List<ProposalGenre> proposalGenres = new ArrayList<>();
 
     @OneToMany(mappedBy = "proposal", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference("ProposalCharacters")
+    @Builder.Default
     private List<ProposalCharacter> proposalCharacters = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
             this.status = "PENDING";
         }
