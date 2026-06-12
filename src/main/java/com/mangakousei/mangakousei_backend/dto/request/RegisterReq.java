@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class RegisterReq {
     @NotBlank(message = "Full name cannot be blank")
-    @Size(max = 100, message = "Full name must not exceed 100 characters")
+    @Size(min = 8, max = 100, message = "Full name must be between 8 and 100 characters")
     private String fullName;
 
     @NotBlank(message = "Email cannot be blank")
