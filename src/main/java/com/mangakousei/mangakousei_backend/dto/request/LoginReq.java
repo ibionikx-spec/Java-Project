@@ -3,6 +3,7 @@ package com.mangakousei.mangakousei_backend.dto.request;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -12,6 +13,7 @@ public class LoginReq {
     private String email;
 
     @NotBlank(message = "Password cannot be blank")
+    @Size(max = 100, message = "Password must be between 16 and 100 characters")
     private String password;
 
     @JsonProperty("isRememberMe")

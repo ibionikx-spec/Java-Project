@@ -145,6 +145,7 @@ public class AuthService {
                 .roles(savedUser.getRoles().stream()
                         .map(Role::getRoleName)
                         .collect(Collectors.toList()))
+                .avatarUrl(savedUser.getAvatarUrl())
                 .build();
     }
 

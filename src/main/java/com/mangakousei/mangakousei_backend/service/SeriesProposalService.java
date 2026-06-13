@@ -1,6 +1,7 @@
 package com.mangakousei.mangakousei_backend.service;
 
 import com.mangakousei.mangakousei_backend.dto.request.CreateProposalReq;
+import com.mangakousei.mangakousei_backend.dto.request.ReviewProposalReq;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalListRes;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalRes;
 import com.mangakousei.mangakousei_backend.entity.entity.*;
@@ -119,5 +120,61 @@ public class SeriesProposalService {
         String email = auth.getName();
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Transactional
+    public void reviewProposal(Long proposalId, ReviewProposalReq request) {
+        SeriesProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy proposal"));
+        
+        if (!List.of("pending", "revision").contains(proposal.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể duyệt proposal ở trạng thái chờ hoặc cần sửa");
+        }
+        
+        User currentUser = getCurrentUser();
+        
+        switch (request.getDecision()) {
+            case "approve":
+                proposal.setStatus("approved");
+                break;
+                
+            case "revision":
+                if (request.getFeedback() == null || request.getFeedback().isBlank()) {
+                    throw new IllegalArgumentException("Phản hồi yêu cầu sửa không được để trống");
+                }
+                proposal.setStatus("revision");
+                proposal.setRevisionFeedback(request.getFeedback());
+                break;
+                
+            case "reject":
+                if (request.getReason() == null || request.getReason().isBlank()) {
+                    throw new IllegalArgumentException("Lý do từ chối không được để trống");
+                }
+                proposal.setStatus("rejected");
+                proposal.setRejectionReason(request.getReason());
+                break;
+                
+            default:
+                throw new IllegalArgumentException("Decision không hợp lệ");
+        }
+        
+        proposal.setReviewedBy(currentUser);
+        proposal.setDecidedAt(LocalDateTime.now());
+        proposal.setUpdatedAt(LocalDateTime.now());
+        proposalRepository.save(proposal);
+    }
+
+    @Transactional
+    public void reopenProposal(Long proposalId) {
+        SeriesProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy proposal"));
+        
+        proposal.setStatus("pending");
+        proposal.setRejectionReason(null);
+        proposal.setRevisionFeedback(null);
+        proposal.setReviewedBy(null);
+        proposal.setDecidedAt(null);
+        proposal.setUpdatedAt(LocalDateTime.now());
+        proposalRepository.save(proposal);
     }
 }
