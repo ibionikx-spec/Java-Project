@@ -123,6 +123,27 @@ public class User {
     @JsonManagedReference("EditorReviewedProposals")
     private List<SeriesProposal> reviewedProposals;
 
+    @OneToMany(mappedBy = "assignedTantou")
+    @JsonManagedReference("TantouAssignedProposals")
+    private List<SeriesProposal> assignedProposals = new ArrayList<>();
+
+    @OneToMany(mappedBy = "assignedTo")
+    @JsonManagedReference("AssistantAssignedTasks")
+    private List<Task> assignedTasks = new ArrayList<>();
+
+
+    @OneToMany(mappedBy = "tantou", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("TantouAssignments")
+    private List<TantouMangakaAssignment> tantouAssignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "mangaka", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("MangakaAssignments")
+    private List<TantouMangakaAssignment> mangakaAssignments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "assignedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("AdminAssignments")
+    private List<TantouMangakaAssignment> createdAssignments = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

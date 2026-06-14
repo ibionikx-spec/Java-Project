@@ -77,6 +77,11 @@ public class Task {
     @Builder.Default
     private List<Payment> taskPayemtns = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_to")
+    @JsonBackReference("AssistantAssignedTasks")
+    private User assignedTo;
+
    @PrePersist
    protected void onCreated(){
     this.createdAt = LocalDateTime.now();

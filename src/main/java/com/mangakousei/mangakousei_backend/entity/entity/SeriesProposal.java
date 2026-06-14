@@ -78,6 +78,11 @@ public class SeriesProposal {
     @Builder.Default
     private List<ProposalCharacter> proposalCharacters = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_tantou_id")
+    @JsonBackReference("TantouAssignedProposals")
+    private User assignedTantou;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
