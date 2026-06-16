@@ -2,6 +2,7 @@ package com.mangakousei.mangakousei_backend.service;
 
 import com.mangakousei.mangakousei_backend.dto.request.ChangePasswordReq;
 import com.mangakousei.mangakousei_backend.dto.request.UpdateProfileReq;
+import com.mangakousei.mangakousei_backend.dto.response.UserFullProfileRes;
 import com.mangakousei.mangakousei_backend.dto.response.UserInfoRes;
 import com.mangakousei.mangakousei_backend.entity.entity.User;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
@@ -108,5 +109,11 @@ public class UserProfileService {
         }
     }
     return newAvatarUrl;
+    }
+    @Transactional(readOnly = true)
+        public UserFullProfileRes getUserFullProfile(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new CustomAppException("User not found", HttpStatus.NOT_FOUND));
+        return userMapper.toFullProfileDto(user);
     }
 }

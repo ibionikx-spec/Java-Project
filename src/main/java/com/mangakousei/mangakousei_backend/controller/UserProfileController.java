@@ -3,6 +3,7 @@ package com.mangakousei.mangakousei_backend.controller;
 import com.mangakousei.mangakousei_backend.dto.request.ChangePasswordReq;
 import com.mangakousei.mangakousei_backend.dto.request.UpdateProfileReq;
 import com.mangakousei.mangakousei_backend.dto.response.ApiResponse;
+import com.mangakousei.mangakousei_backend.dto.response.UserFullProfileRes;
 import com.mangakousei.mangakousei_backend.dto.response.UserInfoRes;
 import com.mangakousei.mangakousei_backend.dto.response.UserStatsRes;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
@@ -58,5 +59,9 @@ public class UserProfileController {
         }
         String avatarUrl = userProfileService.updateAvatar(file);
         return ResponseEntity.ok(ApiResponse.success("Avatar upload successfullt", Map.of("avatarUrl", avatarUrl)));
+    }
+    @GetMapping("/{userId}/full-profile")
+        public ResponseEntity<ApiResponse<UserFullProfileRes>> getUserFullProfile(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.success("Success", userProfileService.getUserFullProfile(userId)));
     }
 }
