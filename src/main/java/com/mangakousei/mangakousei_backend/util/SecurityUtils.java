@@ -25,6 +25,7 @@ public class SecurityUtils {
     
     public static boolean isAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assert auth != null;
         return auth.getAuthorities().stream()
             .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
     }

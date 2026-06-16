@@ -12,6 +12,7 @@ import com.mangakousei.mangakousei_backend.exception.CustomAppException;
 import com.mangakousei.mangakousei_backend.repository.DecisionTypeRepository;
 import com.mangakousei.mangakousei_backend.repository.GenreRepository;
 import com.mangakousei.mangakousei_backend.repository.PublicationDecisionRepository;
+import com.mangakousei.mangakousei_backend.repository.PublicationScheduleRepository;
 import com.mangakousei.mangakousei_backend.repository.PublicationTypeRepository;
 import com.mangakousei.mangakousei_backend.repository.SeriesProposalRepository;
 import com.mangakousei.mangakousei_backend.repository.SeriesRepository;
@@ -44,6 +45,7 @@ public class SeriesProposalService {
     private final PublicationTypeRepository publicationTypeRepository;
     private final DecisionTypeRepository decisionTypeRepository;
     private final PublicationDecisionRepository publicationDecisionRepository;
+    private final PublicationScheduleRepository publicationScheduleRepository;
 
     public ProposalRes createProposal(CreateProposalReq request) {
         User mangaka = getCurrentUser();
@@ -141,27 +143,26 @@ public class SeriesProposalService {
     }
 
     @Transactional
-    public void adminReviewProposal(Long proposalId, ReviewProposalReq request) {
+public Map<String, Object> adminReviewProposal(Long proposalId, ReviewProposalReq request) {
         SeriesProposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new CustomAppException(
                         "Không tìm thấy proposal", HttpStatus.NOT_FOUND));
-
+ 
         if (!"pending_admin".equals(proposal.getStatus())) {
             throw new CustomAppException(
                     "Proposal này không ở trạng thái chờ admin phê duyệt",
                     HttpStatus.BAD_REQUEST);
         }
-
-        User admin = getCurrentUser();
-
+ 
         switch (request.getDecision()) {
             case "approve" -> {
-                proposal.setStatus("approved");
-                proposal.setDecidedAt(LocalDateTime.now());
+                proposal.setStatus("approved_pending_schedule");
                 proposal.setUpdatedAt(LocalDateTime.now());
                 proposalRepository.save(proposal);
-
-                createSeriesFromProposal(proposal, admin);
+                return Map.of(
+                    "proposalId", proposal.getProposalId(),
+                    "status", "approved_pending_schedule"
+                );
             }
             case "reject" -> {
                 if (request.getReason() == null || request.getReason().isBlank())
@@ -169,14 +170,18 @@ public class SeriesProposalService {
                             "Lý do từ chối không được để trống", HttpStatus.BAD_REQUEST);
                 proposal.setStatus("rejected");
                 proposal.setRejectionReason(request.getReason());
-                proposal.setDecidedAt(LocalDateTime.now());
                 proposal.setUpdatedAt(LocalDateTime.now());
                 proposalRepository.save(proposal);
+                return Map.of(
+                    "proposalId", proposal.getProposalId(),
+                    "status", "rejected"
+                );
             }
             default -> throw new CustomAppException(
-                    "Decision không hợp lệ", HttpStatus.BAD_REQUEST);
+                    "Decision không hợp lệ: chỉ chấp nhận 'approve' hoặc 'reject'",
+                    HttpStatus.BAD_REQUEST);
         }
-    }
+    } 
 
     @Transactional
     public void reopenProposal(Long proposalId) {
@@ -250,7 +255,61 @@ public class SeriesProposalService {
         return result;
     }
 
-    private void createSeriesFromProposal(SeriesProposal proposal, User admin) {
+    @Transactional
+    public void cancelApprove(Long proposalId) {
+        SeriesProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy proposal", HttpStatus.NOT_FOUND));
+ 
+        if (!"approved_pending_schedule".equals(proposal.getStatus())) {
+            throw new CustomAppException(
+                    "Proposal không ở trạng thái chờ set lịch",
+                    HttpStatus.BAD_REQUEST);
+        }
+ 
+        proposal.setStatus("pending_admin");
+        proposal.setUpdatedAt(LocalDateTime.now());
+        proposalRepository.save(proposal);
+    }
+
+    @Transactional
+    public Map<String, Object> confirmScheduleAndCreateSeries(Long proposalId,
+                                                               String scheduleType,
+                                                               Integer dayValue) {
+        SeriesProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy proposal", HttpStatus.NOT_FOUND));
+ 
+        if (!"approved_pending_schedule".equals(proposal.getStatus())) {
+            throw new CustomAppException(
+                    "Proposal không ở trạng thái chờ set lịch",
+                    HttpStatus.BAD_REQUEST);
+        }
+ 
+        User admin = getCurrentUser();
+ 
+        Series savedSeries = createSeriesFromProposal(proposal, admin);
+ 
+        PublicationSchedule schedule = PublicationSchedule.builder()
+                .series(savedSeries)
+                .scheduleType(scheduleType)
+                .dayValue(dayValue)
+                .build();
+        publicationScheduleRepository.save(schedule);
+ 
+        proposal.setStatus("approved");
+        proposal.setDecidedAt(LocalDateTime.now());
+        proposal.setUpdatedAt(LocalDateTime.now());
+        proposalRepository.save(proposal);
+ 
+        return Map.of(
+            "seriesId", savedSeries.getSeriesId(),
+            "proposalId", proposal.getProposalId(),
+            "status", "approved"
+        );
+    }
+
+    private Series createSeriesFromProposal(SeriesProposal proposal, User admin) {
  
         SeriesStatus approvedStatus = seriesStatusRepository
                 .findBySeriesStatusName("approved")
@@ -261,9 +320,7 @@ public class SeriesProposalService {
                         HttpStatus.INTERNAL_SERVER_ERROR));
  
         PublicationType publicationType = publicationTypeRepository
-                .findByPublicationTypeName("manga")
-                .or(() -> publicationTypeRepository.findByPublicationTypeName("Manga"))
-                .or(() -> publicationTypeRepository.findAll().stream().findFirst())
+                .findById(1L)
                 .orElseThrow(() -> new CustomAppException(
                         "Không tìm thấy PublicationType trong database",
                         HttpStatus.INTERNAL_SERVER_ERROR));
@@ -277,7 +334,7 @@ public class SeriesProposalService {
                         HttpStatus.INTERNAL_SERVER_ERROR));
  
         List<Genre> genres = proposal.getProposalGenres().stream()
-                .map(pg -> pg.getGenre())
+                .map(ProposalGenre::getGenre)
                 .toList();
  
         Series series = Series.builder()
@@ -288,7 +345,7 @@ public class SeriesProposalService {
                 .seriesStatus(approvedStatus)
                 .publicationType(publicationType)
                 .approvedAt(LocalDateTime.now())
-                .genres(new java.util.ArrayList<>(genres))
+                .genres(new ArrayList<>(genres))
                 .build();
  
         Series savedSeries = seriesRepository.save(series);
@@ -300,7 +357,8 @@ public class SeriesProposalService {
         decision.setReason("Admin phê duyệt proposal #"
                 + proposal.getProposalId()
                 + " - \"" + proposal.getWorkingTitle() + "\"");
- 
         publicationDecisionRepository.save(decision);
+ 
+        return savedSeries;
     }
 }

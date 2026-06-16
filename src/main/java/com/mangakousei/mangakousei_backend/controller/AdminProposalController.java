@@ -30,8 +30,11 @@ public class AdminProposalController {
             throw new CustomAppException(
                     "Bạn không có quyền phê duyệt proposal", HttpStatus.FORBIDDEN);
         }
-        proposalService.adminReviewProposal(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Admin reviewed proposal successfully", null));
+
+        return ResponseEntity.ok(ApiResponse.success(
+            "Admin reviewed proposal successfully",
+            proposalService.adminReviewProposal(id, request)
+        ));
     }
 
     @GetMapping("/pending")
@@ -41,5 +44,14 @@ public class AdminProposalController {
         }
         List<ProposalListRes> proposals = proposalService.getAdminPendingProposals();
         return ResponseEntity.ok(ApiResponse.success("Fetched pending proposals for admin", proposals));
+    }
+
+    @PatchMapping("/{id}/cancel-approve")
+    public ResponseEntity<?> cancelApprove(@PathVariable Long id) {
+        if (!SecurityUtils.isAdmin()) {
+            throw new CustomAppException("Không có quyền", HttpStatus.FORBIDDEN);
+        }
+        proposalService.cancelApprove(id);
+        return ResponseEntity.ok(ApiResponse.success("Đã huỷ duyệt, proposal về pending_admin", null));
     }
 }
