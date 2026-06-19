@@ -45,4 +45,11 @@ public class SecurityUtils {
         return auth.getAuthorities().stream()
                 .anyMatch(grantedAuthority -> Objects.equals(grantedAuthority.getAuthority(), "TANTOU"));
     }
+
+    public static boolean isAssistant() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assert auth != null;
+        return auth.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> Objects.equals(grantedAuthority.getAuthority(), "ASSISTANT"));
+    }
 }
