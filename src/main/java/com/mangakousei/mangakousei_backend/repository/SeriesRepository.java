@@ -5,6 +5,7 @@ import org.springframework.data.repository.query.Param;
 import com.mangakousei.mangakousei_backend.entity.entity.Series;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SeriesRepository extends JpaRepository<Series, Long> {
     long countByCreatorUserId(Long userId);
@@ -16,4 +17,10 @@ public interface SeriesRepository extends JpaRepository<Series, Long> {
 
     List<Series> findByCreatorUserIdOrderByApprovedAtDesc(Long userId);
     List<Series> findByEditorUserIdOrderByApprovedAtDesc(Long editorId);
+
+    @Query("SELECT DISTINCT s FROM Series s LEFT JOIN FETCH s.genres LEFT JOIN FETCH s.creator WHERE s.approvedAt IS NOT NULL ORDER BY s.approvedAt DESC")
+    List<Series> findAllPublicSeries();
+
+    @Query("SELECT DISTINCT s FROM Series s LEFT JOIN FETCH s.genres LEFT JOIN FETCH s.creator WHERE s.seriesId = :seriesId AND s.approvedAt IS NOT NULL")
+    Optional<Series> findPublicSeriesById(@Param("seriesId") Long seriesId);
 }
