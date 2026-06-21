@@ -55,4 +55,11 @@ public class TantouMangakaController {
         List<MangakaSeriesRes> series = mangakaSeriesService.getSeriesByMangaka(currentUserId);
         return ResponseEntity.ok(ApiResponse.success("Fetched series", series));
     }
+
+    @GetMapping("/series/{seriesId}")
+    public ResponseEntity<?> getSeriesDetail(@PathVariable Long seriesId) {
+        Long mangakaId = SecurityUtils.getCurrentUserId();
+        MangakaSeriesRes result = mangakaSeriesService.getSeriesDetail(seriesId, mangakaId);
+        return ResponseEntity.ok(ApiResponse.success("Fetched series detail", result));
+    }
 }

@@ -23,4 +23,6 @@ public interface SeriesRepository extends JpaRepository<Series, Long> {
 
     @Query("SELECT DISTINCT s FROM Series s LEFT JOIN FETCH s.genres LEFT JOIN FETCH s.creator WHERE s.seriesId = :seriesId AND s.approvedAt IS NOT NULL")
     Optional<Series> findPublicSeriesById(@Param("seriesId") Long seriesId);
+
+    Optional<Series> findBySeriesIdAndCreatorUserId(Long seriesId, Long creatorId);
 }
