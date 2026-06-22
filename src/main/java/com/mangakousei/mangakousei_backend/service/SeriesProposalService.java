@@ -4,10 +4,12 @@ import com.mangakousei.mangakousei_backend.dto.request.CreateProposalReq;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalListRes;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalRes;
 import com.mangakousei.mangakousei_backend.entity.entity.*;
+import com.mangakousei.mangakousei_backend.exception.CustomAppException;
 import com.mangakousei.mangakousei_backend.repository.GenreRepository;
 import com.mangakousei.mangakousei_backend.repository.SeriesProposalRepository;
 import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -42,7 +44,7 @@ public class SeriesProposalService {
 
         for (Long genreId : request.getGenreIds()) {
             Genre genre = genreRepository.findById(genreId)
-                    .orElseThrow(() -> new RuntimeException("Genre not found with id: " + genreId));
+                    .orElseThrow(() -> new CustomAppException("Genre not found with id: " + genreId, HttpStatus.NOT_FOUND));
             proposal.addGenre(genre);
         }
 
@@ -113,11 +115,11 @@ public class SeriesProposalService {
 
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            throw new RuntimeException("User not logged in");
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new CustomAppException("User not logged in", HttpStatus.UNAUTHORIZED);
         }
         String email = auth.getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomAppException("User not found", HttpStatus.UNAUTHORIZED));
     }
 }
