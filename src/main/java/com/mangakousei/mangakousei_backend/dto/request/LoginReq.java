@@ -13,7 +13,7 @@ public class LoginReq {
     private String email;
 
     @NotBlank(message = "Password cannot be blank")
-    @Size(min = 16, max = 100, message = "Password must be between 16 and 100 characters")
+    @Size(max = 100, message = "Password must be between 16 and 100 characters")
     private String password;
 
     @JsonProperty("isRememberMe")
