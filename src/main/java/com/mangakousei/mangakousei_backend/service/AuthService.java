@@ -7,6 +7,7 @@ import com.mangakousei.mangakousei_backend.dto.response.UserInfoRes;
 import com.mangakousei.mangakousei_backend.entity.entity.User;
 import com.mangakousei.mangakousei_backend.entity.system.Role;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
+import com.mangakousei.mangakousei_backend.repository.RoleRepository;
 import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import com.mangakousei.mangakousei_backend.security.CustomUserDetails;
 import com.mangakousei.mangakousei_backend.security.CustomUserDetailsService;
@@ -25,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Collectors;
 
@@ -32,10 +34,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final String DEFAULT_ROLE = "MANGAKA";
+
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService userDetailsService;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final CookieService cookieService;
 
@@ -86,8 +91,8 @@ public class AuthService {
             throw new CustomAppException("Please login to continue!", HttpStatus.UNAUTHORIZED);
         }
 
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
-            cookieService.clearAuthCookies(response, refreshToken);
+        if (!jwtTokenProvider.validateToken(refreshToken) || !jwtTokenProvider.isRefreshToken(refreshToken)) {
+            cookieService.clearAuthCookies(response);
             throw new CustomAppException("Login session has expired, please log in again!", HttpStatus.UNAUTHORIZED);
         }
 
@@ -125,6 +130,7 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
     public UserInfoRes register(RegisterReq request) {
         userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
             throw new CustomAppException("Email already exists", HttpStatus.CONFLICT);
@@ -135,6 +141,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .build();
+        newUser.getRoles().add(getOrCreateDefaultRole());
 
         User savedUser = userRepository.save(newUser);
 
@@ -173,5 +180,10 @@ public class AuthService {
 
     public void logout(HttpServletResponse response) {
         cookieService.clearAuthCookies(response);
+    }
+
+    private Role getOrCreateDefaultRole() {
+        return roleRepository.findByRoleName(DEFAULT_ROLE)
+                .orElseGet(() -> roleRepository.save(new Role(null, DEFAULT_ROLE)));
     }
 }
