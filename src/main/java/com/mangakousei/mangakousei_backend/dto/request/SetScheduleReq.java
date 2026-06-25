@@ -12,11 +12,9 @@ public class SetScheduleReq {
     @NotNull
     private Long seriesId;
  
-    // "weekly" hoặc "monthly"
     @NotBlank
     private String scheduleType;
  
-    // weekly: 1-7 | monthly: 1-31
     @NotNull
     @Min(1) @Max(31)
     private Integer dayValue;

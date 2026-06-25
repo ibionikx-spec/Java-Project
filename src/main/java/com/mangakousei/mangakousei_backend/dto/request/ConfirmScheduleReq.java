@@ -1,4 +1,3 @@
-// src/main/java/com/mangakousei/mangakousei_backend/dto/request/ConfirmScheduleReq.java
 package com.mangakousei.mangakousei_backend.dto.request;
 
 import jakarta.validation.constraints.Max;
@@ -13,11 +12,9 @@ public class ConfirmScheduleReq {
     @NotNull
     private Long proposalId;
 
-    // "weekly" hoặc "monthly"
     @NotBlank
     private String scheduleType;
 
-    // weekly: 1-7 | monthly: 1-31
     @NotNull
     @Min(1)
     @Max(31)
