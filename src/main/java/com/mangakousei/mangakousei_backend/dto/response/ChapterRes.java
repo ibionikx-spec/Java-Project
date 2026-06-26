@@ -23,4 +23,6 @@ public class ChapterRes {
     private String seriesTitle;
     private String mangakaName;
     private String mangakaAvatarUrl;
+
+    private String adminNote;
 }

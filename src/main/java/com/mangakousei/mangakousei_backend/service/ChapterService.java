@@ -298,6 +298,7 @@ public class ChapterService {
                 .pageDeadlines(deadlines)
                 .totalDeadlines(total)
                 .submittedDeadlines(submitted)
+                .adminNote(c.getAdminNote())
                 .build();
     }
 
