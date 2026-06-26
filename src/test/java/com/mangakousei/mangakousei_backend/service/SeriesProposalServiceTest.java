@@ -46,6 +46,7 @@ class SeriesProposalServiceTest {
     @Mock private DecisionTypeRepository decisionTypeRepository;
     @Mock private PublicationDecisionRepository publicationDecisionRepository;
     @Mock private PublicationScheduleRepository publicationScheduleRepository;
+    @Mock private ActivityLogService activityLogService;
 
     @InjectMocks
     private SeriesProposalService seriesProposalService;
