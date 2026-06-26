@@ -116,31 +116,38 @@ public class User {
 
     @OneToMany(mappedBy = "mangaka", cascade = CascadeType.ALL)
     @JsonManagedReference("MangakaProposals")
-    private List<SeriesProposal> submittedProposals;
+    @Builder.Default
+    private List<SeriesProposal> submittedProposals = new ArrayList<>();;
 
     @OneToMany(mappedBy = "reviewedBy")
     @JsonManagedReference("EditorReviewedProposals")
-    private List<SeriesProposal> reviewedProposals;
+    @Builder.Default
+    private List<SeriesProposal> reviewedProposals = new ArrayList<>();;
 
     @OneToMany(mappedBy = "assignedTantou")
     @JsonManagedReference("TantouAssignedProposals")
+    @Builder.Default
     private List<SeriesProposal> assignedProposals = new ArrayList<>();
 
     @OneToMany(mappedBy = "assignedTo")
     @JsonManagedReference("AssistantAssignedTasks")
+    @Builder.Default
     private List<Task> assignedTasks = new ArrayList<>();
 
 
     @OneToMany(mappedBy = "tantou", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference("TantouAssignments")
+    @Builder.Default
     private List<TantouMangakaAssignment> tantouAssignments = new ArrayList<>();
 
     @OneToMany(mappedBy = "mangaka", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference("MangakaAssignments")
+    @Builder.Default
     private List<TantouMangakaAssignment> mangakaAssignments = new ArrayList<>();
 
     @OneToMany(mappedBy = "assignedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference("AdminAssignments")
+    @Builder.Default
     private List<TantouMangakaAssignment> createdAssignments = new ArrayList<>();
 
     @OneToMany(mappedBy = "mangaka", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
