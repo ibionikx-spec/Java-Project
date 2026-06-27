@@ -23,4 +23,7 @@ public interface TantouMangakaAssignmentRepository
     @Transactional
     @Query("UPDATE TantouMangakaAssignment t SET t.isActive = false WHERE t.tantou.userId = :tantouId AND t.mangaka.userId = :mangakaId")
     void deactivateAllFor(Long tantouId, Long mangakaId);
+
+    Optional<TantouMangakaAssignment> findByTantouUserIdAndMangakaUserId(
+            Long tantouId, Long mangakaId);
 }

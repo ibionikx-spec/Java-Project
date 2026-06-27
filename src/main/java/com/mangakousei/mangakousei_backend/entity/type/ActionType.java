@@ -29,6 +29,9 @@ public enum ActionType {
     LOGIN("account"),
     UPDATE_PROFILE("account"),
     CHANGE_PASSWORD("account"),
+    CREATE_USER("account"),
+    ASSIGN_TANTOU("account"),
+    REMOVE_ASSIGNMENT("account"),
 
     // ── system ──────────────────────────────────────────────────────────────
     UPDATE_SETTINGS("system");
