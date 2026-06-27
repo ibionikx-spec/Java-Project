@@ -47,6 +47,7 @@ class SeriesProposalServiceTest {
     @Mock private PublicationDecisionRepository publicationDecisionRepository;
     @Mock private PublicationScheduleRepository publicationScheduleRepository;
     @Mock private ActivityLogService activityLogService;
+    @Mock private NotificationService notificationService;
 
     @InjectMocks
     private SeriesProposalService seriesProposalService;
@@ -143,6 +144,7 @@ class SeriesProposalServiceTest {
         ReviewProposalReq req = new ReviewProposalReq();
         req.setDecision("approve");
 
+        when(userRepository.findAllByRoleName("ADMIN")).thenReturn(List.of());
         when(userRepository.findByEmail("mangaka@test.com")).thenReturn(Optional.of(mockMangaka));
         when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
         when(proposalRepository.save(any())).thenReturn(proposal);

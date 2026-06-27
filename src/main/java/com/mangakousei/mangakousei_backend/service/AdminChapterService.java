@@ -27,6 +27,7 @@ public class AdminChapterService {
     private final ChapterStatusRepository chapterStatusRepository;
     private final ChapterPageDeadlineRepository deadlineRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public List<ChapterRes> getPendingPublishChapters() {
         return chapterRepository
@@ -79,6 +80,26 @@ public class AdminChapterService {
                 .seriesId(series != null ? series.getSeriesId() : null)
                 .chapterId(chapterId)
                 .build());
+
+        if (series != null && series.getEditor() != null) {
+              notificationService.send(series.getEditor().getUserId(), "REVIEW",
+                      approved ? "✅ Chapter được duyệt đăng" : "✏️ Chapter cần chỉnh sửa",
+                      (approved ? "Admin đã duyệt đăng" : "Admin yêu cầu chỉnh sửa")
+                      + " Ch." + chapter.getChapterNumber()
+                      + (chapter.getTitle() != null ? " – " + chapter.getTitle() : "")
+                      + " | " + series.getTitle()
+                      + (!approved && req.getNote() != null ? ": " + req.getNote() : ""));
+        }
+
+        if (series != null && series.getCreator() != null) {
+              notificationService.send(series.getCreator().getUserId(), "REVIEW",
+                      approved ? "🎉 Chapter của bạn được duyệt đăng!" : "✏️ Chapter cần chỉnh sửa",
+                      (approved ? "Admin đã duyệt đăng" : "Admin yêu cầu chỉnh sửa")
+                      + " Ch." + chapter.getChapterNumber()
+                      + (chapter.getTitle() != null ? " – " + chapter.getTitle() : "")
+                      + " | " + series.getTitle()
+                      + (!approved && req.getNote() != null ? ". Ghi chú: " + req.getNote() : ""));
+        }
 
         return result;
     }

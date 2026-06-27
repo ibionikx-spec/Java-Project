@@ -30,6 +30,7 @@ public class TaskSubmissionService {
     private final TaskStatusRepository taskStatusRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public List<AssistantTaskRes> getMyTasks(Long assistantId, String statusFilter) {
         List<Task> tasks;
@@ -99,6 +100,16 @@ public class TaskSubmissionService {
                 .chapterId(chapter != null ? chapter.getChapterId() : null)
                 .build());
 
+        notificationService.send(task.getAssignedBy().getUserId(), "REVIEW",
+              (isResubmit ? "🔄 Assistant nộp lại bài" : "📥 Assistant nộp bài mới"),
+              task.getAssignedBy().getFullName() != null
+                  ? "Assistant " + assistant.getFullName() + (isResubmit ? " đã nộp lại" : " đã nộp")
+                    + " task " + task.getTaskType().getTaskTypeName()
+                    + (page != null ? " – Trang " + page.getPageNumber() : "")
+                    + (chapter != null ? " Ch." + chapter.getChapterNumber() : "")
+                    + (series != null ? " | " + series.getTitle() : "")
+                  : "Có submission mới cần review");
+
         return toSubmissionRes(saved);
     }
 
@@ -163,6 +174,11 @@ public class TaskSubmissionService {
         Task task = submission.getTask();
         boolean approved = "approved".equals(req.getDecision());
 
+        PageRegion region = task.getRegion();
+        Page page = region != null ? region.getPage() : null;
+        Chapter chapter = page != null ? page.getChapter() : null;
+        Series series = chapter != null ? chapter.getSeries() : null;
+
         switch (req.getDecision()) {
             case "approved" -> {
                 TaskSubmissionStatus approvedStatus = submissionStatusRepository
@@ -177,6 +193,13 @@ public class TaskSubmissionService {
                             task.setTaskStatus(doneStatus);
                             taskRepository.save(task);
                         });
+
+                notificationService.send(submission.getSubmittedBy().getUserId(), "REVIEW",
+                  "✅ Bài nộp được duyệt",
+                  "Mangaka đã duyệt task " + task.getTaskType().getTaskTypeName()
+                  + (page != null ? " – Trang " + page.getPageNumber() : "")
+                  + (chapter != null ? " Ch." + chapter.getChapterNumber() : "")
+                  + (series != null ? " | " + series.getTitle() : ""));
             }
             case "rejected" -> {
                 TaskSubmissionStatus rejectedStatus = submissionStatusRepository
@@ -197,6 +220,15 @@ public class TaskSubmissionService {
                             task.setTaskStatus(doingStatus);
                             taskRepository.save(task);
                         });
+
+                String feedback = req.getFeedback() != null && !req.getFeedback().isBlank()
+                          ? ": " + req.getFeedback() : "";
+                notificationService.send(submission.getSubmittedBy().getUserId(), "REVIEW",
+                          "✏️ Bài nộp cần chỉnh sửa",
+                          "Mangaka yêu cầu chỉnh sửa task " + task.getTaskType().getTaskTypeName()
+                          + (page != null ? " – Trang " + page.getPageNumber() : "")
+                          + (chapter != null ? " Ch." + chapter.getChapterNumber() : "")
+                          + (series != null ? " | " + series.getTitle() : "") + feedback);
             }
             default -> throw new CustomAppException(
                     "Decision không hợp lệ: 'approved' hoặc 'rejected'",
@@ -204,11 +236,6 @@ public class TaskSubmissionService {
         }
 
         TaskSubmissionRes result = toSubmissionRes(submissionRepository.save(submission));
-
-        PageRegion region = task.getRegion();
-        Page page = region != null ? region.getPage() : null;
-        Chapter chapter = page != null ? page.getChapter() : null;
-        Series series = chapter != null ? chapter.getSeries() : null;
 
         activityLogService.log(LogContext.builder()
                 .actionType(approved ? ActionType.REVIEW_APPROVED : ActionType.REVIEW_REVISION)

@@ -49,6 +49,7 @@ public class SeriesProposalService {
     private final PublicationDecisionRepository publicationDecisionRepository;
     private final PublicationScheduleRepository publicationScheduleRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public ProposalRes createProposal(CreateProposalReq request) {
         User mangaka = getCurrentUser();
@@ -97,6 +98,11 @@ public class SeriesProposalService {
                 .entityType("PROPOSAL")
                 .entityId(saved.getProposalId())
                 .build());
+
+        notificationService.send(tantou.getUserId(), "PROPOSAL",
+                "📋 Proposal mới cần xem xét",
+                mangaka.getFullName() + " vừa gửi proposal \""
+                        + saved.getWorkingTitle() + "\" – hãy xem xét và phản hồi.");
 
         return new ProposalRes(saved.getProposalId(), saved.getStatus());
     }
@@ -164,6 +170,31 @@ public class SeriesProposalService {
                 .entityType("PROPOSAL")
                 .entityId(proposalId)
                 .build());
+
+        Long mangakaId = proposal.getMangaka().getUserId();
+        String title = proposal.getWorkingTitle();
+
+        switch (request.getDecision()) {
+            case "approve" -> {
+                notificationService.send(mangakaId, "PROPOSAL",
+                        "🎉 Proposal được Tantou duyệt",
+                        "Proposal \"" + title + "\" đã được Tantou duyệt và gửi lên Admin xét duyệt.");
+
+                userRepository.findAllByRoleName("ADMIN").forEach(admin ->
+                        notificationService.send(admin.getUserId(), "PROPOSAL",
+                                "📋 Proposal chờ Admin duyệt",
+                                currentUser.getFullName() + " vừa chuyển proposal \""
+                                        + title + "\" lên chờ Admin xét duyệt."));
+            }
+            case "revision" -> notificationService.send(mangakaId, "PROPOSAL",
+                    "✏️ Proposal cần chỉnh sửa",
+                    "Tantou yêu cầu chỉnh sửa proposal \"" + title
+                            + "\": " + request.getFeedback());
+            case "reject" -> notificationService.send(mangakaId, "PROPOSAL",
+                    "❌ Proposal bị từ chối",
+                    "Tantou đã từ chối proposal \"" + title
+                            + "\". Lý do: " + request.getReason());
+        }
     }
 
     @Transactional
@@ -191,6 +222,16 @@ public class SeriesProposalService {
                         .entityId(proposalId)
                         .build());
 
+                notificationService.send(proposal.getMangaka().getUserId(), "PROPOSAL",
+                          "🎉 Proposal được Admin duyệt",
+                          "Admin đã duyệt proposal \"" + proposal.getWorkingTitle()
+                          + "\". Đang chờ xác nhận lịch phát hành.");
+                if (proposal.getAssignedTantou() != null) {
+                      notificationService.send(proposal.getAssignedTantou().getUserId(), "PROPOSAL",
+                              "✅ Admin duyệt proposal của Mangaka bạn quản lý",
+                              "Proposal \"" + proposal.getWorkingTitle() + "\" đã được Admin duyệt.");
+                }
+
                 return Map.of(
                         "proposalId", proposal.getProposalId(),
                         "status", "approved_pending_schedule"
@@ -211,6 +252,16 @@ public class SeriesProposalService {
                         .entityType("PROPOSAL")
                         .entityId(proposalId)
                         .build());
+
+                notificationService.send(proposal.getMangaka().getUserId(), "PROPOSAL",
+                          "❌ Proposal bị Admin từ chối",
+                          "Admin đã từ chối proposal \"" + proposal.getWorkingTitle()
+                          + "\". Lý do: " + request.getReason());
+                if (proposal.getAssignedTantou() != null) {
+                      notificationService.send(proposal.getAssignedTantou().getUserId(), "PROPOSAL",
+                              "❌ Admin từ chối proposal",
+                              "Proposal \"" + proposal.getWorkingTitle() + "\" của Mangaka bạn quản lý đã bị Admin từ chối.");
+                }
 
                 return Map.of(
                         "proposalId", proposal.getProposalId(),
@@ -349,6 +400,15 @@ public class SeriesProposalService {
                 .entityId(savedSeries.getSeriesId())
                 .seriesId(savedSeries.getSeriesId())
                 .build());
+
+        notificationService.send(proposal.getMangaka().getUserId(), "SYSTEM",
+                  "🚀 Series chính thức được tạo!",
+                  "Series \"" + savedSeries.getTitle() + "\" đã được tạo và lịch phát hành đã được xác nhận. Chúc mừng!");
+        if (proposal.getAssignedTantou() != null) {
+              notificationService.send(proposal.getAssignedTantou().getUserId(), "SYSTEM",
+                      "🚀 Series mới được tạo",
+                      "Series \"" + savedSeries.getTitle() + "\" đã chính thức đi vào sản xuất.");
+        }
 
         return Map.of(
                 "seriesId", savedSeries.getSeriesId(),
