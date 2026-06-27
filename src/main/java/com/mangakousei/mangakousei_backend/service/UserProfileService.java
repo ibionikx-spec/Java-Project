@@ -3,7 +3,6 @@ package com.mangakousei.mangakousei_backend.service;
 import com.mangakousei.mangakousei_backend.dto.request.ChangePasswordReq;
 import com.mangakousei.mangakousei_backend.dto.request.LogContext;
 import com.mangakousei.mangakousei_backend.dto.request.UpdateProfileReq;
-import com.mangakousei.mangakousei_backend.dto.response.UserFullProfileRes;
 import com.mangakousei.mangakousei_backend.dto.response.UserInfoRes;
 import com.mangakousei.mangakousei_backend.dto.response.UserStatsRes;
 import com.mangakousei.mangakousei_backend.entity.entity.User;
