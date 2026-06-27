@@ -31,4 +31,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.roleName = :roleName")
     List<User> findAllByRoleName(@Param("roleName") String roleName);
+
+    @Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE r.roleName = :roleName")
+    long countByRoleName(@Param("roleName") String roleName);
 }

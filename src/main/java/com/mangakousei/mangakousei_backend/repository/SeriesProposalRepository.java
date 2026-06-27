@@ -72,4 +72,6 @@ public interface SeriesProposalRepository extends JpaRepository<SeriesProposal, 
             "WHERE sp.status = 'pending_admin'",
             nativeQuery = true)
     List<Object[]> findPendingAdminProposals();
+
+    long countByStatus(String status);
 }
