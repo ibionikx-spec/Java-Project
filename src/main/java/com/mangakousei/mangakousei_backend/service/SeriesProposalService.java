@@ -237,6 +237,42 @@ public class SeriesProposalService {
                         "status", "approved_pending_schedule"
                 );
             }
+                case "revision" -> {
+                if (request.getFeedback() == null || request.getFeedback().isBlank())
+                    throw new CustomAppException(
+                            "Phản hồi yêu cầu sửa không được để trống", HttpStatus.BAD_REQUEST);
+                
+                proposal.setStatus("revision");
+                proposal.setRevisionFeedback(request.getFeedback());
+                proposal.setUpdatedAt(LocalDateTime.now());
+                proposalRepository.save(proposal);
+
+                // Ghi log hành động yêu cầu sửa
+                activityLogService.log(LogContext.builder()
+                        .actionType(ActionType.APPROVE_SERIES) 
+                        .detail("Admin yêu cầu sửa proposal \"" + proposal.getWorkingTitle() + "\"")
+                        .entityType("PROPOSAL")
+                        .entityId(proposalId)
+                        .build());
+
+                // Gửi thông báo cho Mangaka
+                notificationService.send(proposal.getMangaka().getUserId(), "PROPOSAL",
+                          "✏️ Proposal cần chỉnh sửa (từ Admin)",
+                          "Admin yêu cầu chỉnh sửa proposal \"" + proposal.getWorkingTitle()
+                          + "\". Phản hồi: " + request.getFeedback());
+                
+                // Gửi thông báo cho Tantou quản lý
+                if (proposal.getAssignedTantou() != null) {
+                      notificationService.send(proposal.getAssignedTantou().getUserId(), "PROPOSAL",
+                              "✏️ Admin yêu cầu sửa proposal",
+                              "Proposal \"" + proposal.getWorkingTitle() + "\" của Mangaka bạn quản lý cần được chỉnh sửa. Phản hồi từ Admin: " + request.getFeedback());
+                }
+
+                return Map.of(
+                        "proposalId", proposal.getProposalId(),
+                        "status", "revision"
+                );
+            }
             case "reject" -> {
                 if (request.getReason() == null || request.getReason().isBlank())
                     throw new CustomAppException(
@@ -269,7 +305,7 @@ public class SeriesProposalService {
                 );
             }
             default -> throw new CustomAppException(
-                    "Decision không hợp lệ: chỉ chấp nhận 'approve' hoặc 'reject'",
+                    "Decision không hợp lệ",
                     HttpStatus.BAD_REQUEST);
         }
     }
