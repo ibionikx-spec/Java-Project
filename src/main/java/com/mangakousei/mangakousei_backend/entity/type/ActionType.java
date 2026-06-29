@@ -32,6 +32,7 @@ public enum ActionType {
     CREATE_USER("account"),
     ASSIGN_TANTOU("account"),
     REMOVE_ASSIGNMENT("account"),
+    CREATE_PAYMENT("account"),
 
     // ── system ──────────────────────────────────────────────────────────────
     UPDATE_SETTINGS("system");

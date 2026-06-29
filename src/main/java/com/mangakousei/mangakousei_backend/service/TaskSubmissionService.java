@@ -31,6 +31,7 @@ public class TaskSubmissionService {
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
+    private final PaymentService paymentService;
 
     public List<AssistantTaskRes> getMyTasks(Long assistantId, String statusFilter) {
         List<Task> tasks;
@@ -193,6 +194,8 @@ public class TaskSubmissionService {
                             task.setTaskStatus(doneStatus);
                             taskRepository.save(task);
                         });
+
+                paymentService.createPaymentOnApprove(task, submission, mangakaId);
 
                 notificationService.send(submission.getSubmittedBy().getUserId(), "REVIEW",
                   "✅ Bài nộp được duyệt",

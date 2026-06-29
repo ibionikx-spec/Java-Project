@@ -1,4 +1,3 @@
-// src/main/java/com/mangakousei/mangakousei_backend/service/RegionTaskService.java
 package com.mangakousei.mangakousei_backend.service;
 
 import com.mangakousei.mangakousei_backend.dto.request.CreateRegionReq;
@@ -120,6 +119,7 @@ public class RegionTaskService {
                 .taskType(type)
                 .deadline(req.getDeadline())
                 .description(req.getDescription())
+                .rate(req.getRate())
                 .taskStatus(todoStatus)
                 .build();
 
@@ -131,6 +131,8 @@ public class RegionTaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new CustomAppException(
                         "Không tìm thấy task", HttpStatus.NOT_FOUND));
+
+        if (req.getRate() != null) task.setRate(req.getRate());
 
         if (req.getTaskTypeId() != null) {
             TaskType type = taskTypeRepository.findById(req.getTaskTypeId())
@@ -192,6 +194,7 @@ public class RegionTaskService {
 
     private User getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
+        assert auth != null;
         return userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new CustomAppException(
                         "User not found", HttpStatus.NOT_FOUND));
