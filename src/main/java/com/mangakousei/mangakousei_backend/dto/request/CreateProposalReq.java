@@ -27,6 +27,9 @@ public class CreateProposalReq {
     @NotNull
     private List<CharacterDto> characters;
 
+    @NotNull(message = "Vui lòng chọn Tantou phụ trách")
+    private Long tantouId;
+
     @Data
     public static class CharacterDto {
         @NotBlank

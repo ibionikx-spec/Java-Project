@@ -66,11 +66,10 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
                                 "/api/genres",
-<<<<<<< Updated upstream
                                 "/api/proposals",
                                 "/api/tantou/**",
-=======
->>>>>>> Stashed changes
+                                "/api/mangaka/**",
+                                "/api/admin/**",
                                 "/api/public/**"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")

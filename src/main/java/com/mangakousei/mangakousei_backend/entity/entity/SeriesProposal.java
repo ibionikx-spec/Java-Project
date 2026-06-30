@@ -51,6 +51,9 @@ public class SeriesProposal {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Column(name = "revision_feedback", columnDefinition = "TEXT")
+    private String revisionFeedback;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by")
     @JsonBackReference("EditorReviewedProposals")
@@ -74,6 +77,11 @@ public class SeriesProposal {
     @JsonManagedReference("ProposalCharacters")
     @Builder.Default
     private List<ProposalCharacter> proposalCharacters = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_tantou_id")
+    @JsonBackReference("TantouAssignedProposals")
+    private User assignedTantou;
 
     @PrePersist
     protected void onCreate() {

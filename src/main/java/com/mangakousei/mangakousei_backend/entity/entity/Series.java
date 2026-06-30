@@ -51,6 +51,9 @@ public class Series{
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
+
+    @Column(name = "cover_image_url")
+    private String coverImageUrl;
     
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;

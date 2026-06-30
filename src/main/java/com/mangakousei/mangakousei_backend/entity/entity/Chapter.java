@@ -54,6 +54,9 @@ public class Chapter {
     @Column(name = "deadline")
     private LocalDateTime deadline;
 
+    @Column(name = "admin_note", columnDefinition = "TEXT")
+    private String adminNote;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chapter_status_id", nullable = false)
     private ChapterStatus chapterStatus;

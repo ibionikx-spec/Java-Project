@@ -5,6 +5,7 @@ import com.mangakousei.mangakousei_backend.dto.response.ApiResponse;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalListRes;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalRes;
 import com.mangakousei.mangakousei_backend.service.SeriesProposalService;
+import com.mangakousei.mangakousei_backend.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,36 +33,10 @@ public class SeriesProposalController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search
     ) {
-        List<ProposalListRes> proposals = seriesProposalService.getProposals(status, search);
+        Long tantouId = SecurityUtils.getCurrentUserId();
+        List<ProposalListRes> proposals = seriesProposalService.getProposals(tantouId, status, search);
         return ResponseEntity.ok(
                 ApiResponse.success("Proposals fetched successfully", proposals)
         );
     }
-
-    /*
-    *  @GetMapping("/tantou/proposals/{proposalId}")
-    public ResponseEntity<ApiResponse<ProposalDetailRes>> getProposalDetail(
-            @PathVariable Long proposalId
-    ) {
-        ProposalDetailRes detail = seriesProposalService.getProposalDetail(proposalId);
-        return ResponseEntity.ok(
-                ApiResponse.success("Proposal detail fetched successfully", detail)
-        );
-    }
-
-    // Tantou gửi review (approve / revision / reject)
-    @PatchMapping("/tantou/proposals/{proposalId}/review")
-    public ResponseEntity<ApiResponse<Void>> reviewProposal(
-            @PathVariable Long proposalId,
-            @RequestBody @Valid ReviewProposalReq request
-    ) {
-        seriesProposalService.reviewProposal(proposalId, request);
-        return ResponseEntity.ok(
-                ApiResponse.success("Review submitted successfully", null)
-        );
-    }
-}
-
-    *
-    * */
 }

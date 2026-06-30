@@ -1,11 +1,13 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.dto.request.LogContext;
 import com.mangakousei.mangakousei_backend.dto.request.LoginReq;
 import com.mangakousei.mangakousei_backend.dto.request.RegisterReq;
 import com.mangakousei.mangakousei_backend.dto.response.LoginRes;
 import com.mangakousei.mangakousei_backend.dto.response.UserInfoRes;
 import com.mangakousei.mangakousei_backend.entity.entity.User;
 import com.mangakousei.mangakousei_backend.entity.system.Role;
+import com.mangakousei.mangakousei_backend.entity.type.ActionType;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
 import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import com.mangakousei.mangakousei_backend.security.CustomUserDetails;
@@ -38,6 +40,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CookieService cookieService;
+    private final ActivityLogService activityLogService;
 
     public LoginRes login(LoginReq request, HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
@@ -54,10 +57,16 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(authentication);
         String refreshToken = jwtTokenProvider.generateRefreshToken(authentication, request.isRememberMe());
 
-        // 7 ngay va 1 ngay
         long refreshMaxAge = request.isRememberMe() ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
 
         cookieService.setAuthBothCookies(response, accessToken, refreshToken, refreshMaxAge);
+
+        activityLogService.log(userDetails.getId(), LogContext.builder()
+                .actionType(ActionType.LOGIN)
+                .detail("Đăng nhập thành công – " + userDetails.getEmail())
+                .entityType("USER")
+                .entityId(userDetails.getId())
+                .build());
 
         return LoginRes.builder()
                 .id(userDetails.getId())
@@ -74,7 +83,7 @@ public class AuthService {
     public LoginRes refreshToken(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = null;
         if (request.getCookies() != null) {
-            for (Cookie cookie: request.getCookies()) {
+            for (Cookie cookie : request.getCookies()) {
                 if ("refreshToken".equals(cookie.getName())) {
                     refreshToken = cookie.getValue();
                     break;
@@ -104,7 +113,6 @@ public class AuthService {
                 userDetails.getAuthorities()
         );
 
-        // 7 ngay va 1 ngay
         Claims claims = jwtTokenProvider.extractClaimsEvenIfExpired(refreshToken);
         boolean isRememberMe = claims.get("rememberMe") != null && (boolean) claims.get("rememberMe");
         long refreshMaxAge = isRememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;

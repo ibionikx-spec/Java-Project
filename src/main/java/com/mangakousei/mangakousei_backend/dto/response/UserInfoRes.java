@@ -17,4 +17,6 @@ public class UserInfoRes {
     private String email;
     private List<String> roles;
     private String avatarUrl;
+    private Long editedSeries;
+    private Long createdSeries;
 }

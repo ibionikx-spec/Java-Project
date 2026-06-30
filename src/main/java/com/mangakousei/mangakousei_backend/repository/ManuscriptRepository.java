@@ -24,4 +24,5 @@ public interface ManuscriptRepository extends JpaRepository<Manuscript, Long> {
             "JOIN m.manuscriptType mt " +
             "WHERE ms.manuscriptName = 'submitted'")
     List<InboxItemRes> findSubmittedManuscripts();
+    long countBySubmitterUserId(Long userId);
 }

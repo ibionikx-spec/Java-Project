@@ -1,4 +1,5 @@
 package com.mangakousei.mangakousei_backend.entity.entity;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +58,9 @@ public class Task {
    @Column(name = "description", columnDefinition = "TEXT")
    private String description;
 
+   @Column(name = "rate", precision = 15, scale = 2)
+   private BigDecimal rate;
+
    @Column(name = "deadline", nullable = false)
    private LocalDateTime deadline;
 
@@ -76,6 +80,11 @@ public class Task {
     @JsonManagedReference("PaymentTaskId")
     @Builder.Default
     private List<Payment> taskPayemtns = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_to")
+    @JsonBackReference("AssistantAssignedTasks")
+    private User assignedTo;
 
    @PrePersist
    protected void onCreated(){
