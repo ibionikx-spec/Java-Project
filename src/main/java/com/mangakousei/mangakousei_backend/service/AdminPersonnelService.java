@@ -28,6 +28,7 @@ public class AdminPersonnelService {
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
+    private final ChatService chatService;
 
     @Transactional(readOnly = true)
     public List<PersonnelUserRes> getUsersByRole(String roleName) {
@@ -120,6 +121,8 @@ public class AdminPersonnelService {
                 "📋 Tantou phụ trách mới",
                 "Admin vừa chỉ định " + tantou.getFullName()
                         + " làm Tantou phụ trách cho bạn.");
+
+        chatService.getOrCreateConversation(tantouId, mangakaId);
 
         return toAssignRes(saved);
     }

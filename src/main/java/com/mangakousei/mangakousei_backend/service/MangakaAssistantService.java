@@ -27,6 +27,7 @@ public class MangakaAssistantService {
 
     private final MangakaAssistantAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
+    private final ChatService chatService;
 
     public List<AssistantSearchRes> searchAssistants(String keyword, Long mangakaId) {
         List<User> assistants = userRepository
@@ -151,7 +152,13 @@ public class MangakaAssistantService {
         }
 
         switch (req.getDecision()) {
-            case "accept" -> assignment.setStatus("active");
+            case "accept" -> {
+                assignment.setStatus("active");
+                chatService.getOrCreateConversation(
+                        assignment.getMangaka().getUserId(),
+                        assignment.getAssistant().getUserId()
+                );
+            }
             case "reject" -> assignment.setStatus("rejected");
             default -> throw new CustomAppException(
                     "Decision không hợp lệ: chỉ chấp nhận 'accept' hoặc 'reject'",
