@@ -4,10 +4,13 @@ import com.mangakousei.mangakousei_backend.dto.response.ChatMessageRes;
 import com.mangakousei.mangakousei_backend.dto.response.ConversationRes;
 import com.mangakousei.mangakousei_backend.entity.entity.ChatMessage;
 import com.mangakousei.mangakousei_backend.entity.entity.Conversation;
+import com.mangakousei.mangakousei_backend.entity.entity.MangakaAssistantAssignment;
 import com.mangakousei.mangakousei_backend.entity.entity.User;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
 import com.mangakousei.mangakousei_backend.repository.ChatMessageRepository;
 import com.mangakousei.mangakousei_backend.repository.ConversationRepository;
+import com.mangakousei.mangakousei_backend.repository.MangakaAssistantAssignmentRepository;
+import com.mangakousei.mangakousei_backend.repository.TantouMangakaAssignmentRepository;
 import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +30,15 @@ import java.util.stream.Collectors;
 public class ChatService {
 
     private static final int PREVIEW_MAX_LEN = 80;
+    private static final String ASSISTANT_ACTIVE_STATUS = "active";
 
     private final ConversationRepository conversationRepository;
     private final ChatMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+
+    private final TantouMangakaAssignmentRepository tantouMangakaAssignmentRepository;
+    private final MangakaAssistantAssignmentRepository mangakaAssistantAssignmentRepository;
 
     @Transactional
     public Conversation getOrCreateConversation(Long userId1, Long userId2) {
@@ -39,6 +46,7 @@ public class ChatService {
             throw new CustomAppException(
                     "Không thể tạo conversation với chính mình", HttpStatus.BAD_REQUEST);
         }
+
         Long aId = Math.min(userId1, userId2);
         Long bId = Math.max(userId1, userId2);
 
@@ -87,6 +95,12 @@ public class ChatService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new CustomAppException("Không tìm thấy user", HttpStatus.NOT_FOUND));
 
+        if (!isRelationshipActive(conv.getParticipantA(), conv.getParticipantB())) {
+            throw new CustomAppException(
+                    "Không thể gửi tin nhắn -- quan hệ phân công giữa 2 người đã kết thúc",
+                    HttpStatus.FORBIDDEN);
+        }
+
         ChatMessage msg = ChatMessage.builder()
                 .conversation(conv)
                 .sender(sender)
@@ -113,7 +127,7 @@ public class ChatService {
 
     @Transactional
     public void markConversationRead(Long conversationId, Long userId) {
-        getConversationAndVerifyAccess(conversationId, userId); // đảm bảo có quyền
+        getConversationAndVerifyAccess(conversationId, userId);
         messageRepository.markConversationReadForUser(conversationId, userId);
     }
 
@@ -130,6 +144,33 @@ public class ChatService {
                     "Bạn không thuộc cuộc trò chuyện này", HttpStatus.FORBIDDEN);
         }
         return conv;
+    }
+
+    private boolean isRelationshipActive(User u1, User u2) {
+        Long id1 = u1.getUserId();
+        Long id2 = u2.getUserId();
+
+        boolean tantouMangakaActive =
+                tantouMangakaAssignmentRepository
+                        .findByTantou_UserIdAndMangaka_UserIdAndIsActiveTrue(id1, id2)
+                        .isPresent()
+                        || tantouMangakaAssignmentRepository
+                        .findByTantou_UserIdAndMangaka_UserIdAndIsActiveTrue(id2, id1)
+                        .isPresent();
+
+        if (tantouMangakaActive) return true;
+
+        boolean mangakaAssistantActive =
+                mangakaAssistantAssignmentRepository
+                        .findTopByMangakaUserIdAndAssistantUserIdOrderByInvitedAtDesc(id1, id2)
+                        .map(a -> ASSISTANT_ACTIVE_STATUS.equals(a.getStatus()))
+                        .orElse(false)
+                        || mangakaAssistantAssignmentRepository
+                        .findTopByMangakaUserIdAndAssistantUserIdOrderByInvitedAtDesc(id2, id1)
+                        .map(a -> ASSISTANT_ACTIVE_STATUS.equals(a.getStatus()))
+                        .orElse(false);
+
+        return mangakaAssistantActive;
     }
 
     private void pushRealtime(String userEmail, ChatMessageRes payload) {
@@ -158,7 +199,7 @@ public class ChatService {
                 .otherUserId(other.getUserId())
                 .otherUserName(other.getFullName())
                 .otherUserAvatarUrl(other.getAvatarUrl())
-                .otherUserRole(other.getRoles().isEmpty() ? null : other.getRoles().iterator().next().getRoleName())
+                .otherUserRole(other.getRoles().isEmpty() ? null : other.getRoles().getFirst().getRoleName())
                 .lastMessagePreview(c.getLastMessagePreview())
                 .lastMessageAt(c.getLastMessageAt())
                 .unreadCount(unread)
