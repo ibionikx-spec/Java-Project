@@ -15,4 +15,7 @@ public class UpdateProfileReq {
 
     @Pattern(regexp = "^$|^[0-9+\\-\\s]{8,15}$", message = "Số điện thoại không hợp lệ")
     private String phone;
+
+    @Size(max = 500, message = "Giới thiệu tối đa 500 ký tự")
+    private String bio;
 }

@@ -53,6 +53,9 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "bio", columnDefinition = "TEXT")
+    private String bio;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @Builder.Default
     @JoinTable(

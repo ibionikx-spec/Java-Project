@@ -25,6 +25,7 @@ public class UserMapper {
                 .email(user.getEmail())
                 .avatarUrl(user.getAvatarUrl())
                 .phone(user.getPhone())
+                .bio(user.getBio())
                 .roles(user.getRoles().stream()
                     .map(Role::getRoleName)
                     .collect(Collectors.toList()))

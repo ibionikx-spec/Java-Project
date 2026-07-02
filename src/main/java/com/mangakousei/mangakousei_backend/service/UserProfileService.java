@@ -49,6 +49,11 @@ public class UserProfileService {
             user.setPhone(phone.isEmpty() ? null : phone);
         }
 
+        if (request.getBio() != null) {
+            String bio = request.getBio().trim();
+            user.setBio(bio.isEmpty() ? null : bio);
+        }
+
         UserInfoRes result = userMapper.toDto(userRepository.save(user));
 
         activityLogService.log(LogContext.builder()
