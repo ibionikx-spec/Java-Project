@@ -62,4 +62,35 @@ public interface ChapterPageDeadlineRepository extends JpaRepository<ChapterPage
             @Param("mangakaId") Long mangakaId,
             @Param("status") String status);
 
+
+    @Query("""
+    SELECT COUNT(d) FROM ChapterPageDeadline d
+    JOIN d.chapter c
+    JOIN c.series s
+    WHERE s.creator.userId = :mangakaId
+    """)
+    long countByMangakaId(@Param("mangakaId") Long mangakaId);
+
+    @Query("""
+    SELECT COUNT(d) FROM ChapterPageDeadline d
+    JOIN d.chapter c
+    JOIN c.series s
+    WHERE s.creator.userId = :mangakaId
+      AND d.status IN :statuses
+    """)
+    long countByMangakaIdAndStatusIn(
+            @Param("mangakaId") Long mangakaId,
+            @Param("statuses") java.util.List<String> statuses);
+
+    @Query("""
+    SELECT d FROM ChapterPageDeadline d
+    JOIN d.chapter c
+    JOIN c.series s
+    WHERE s.creator.userId = :mangakaId
+      AND d.submittedAt IS NOT NULL
+      AND d.submittedAt >= :since
+    """)
+    java.util.List<ChapterPageDeadline> findSubmittedByMangakaIdSince(
+            @Param("mangakaId") Long mangakaId,
+            @Param("since") java.time.LocalDateTime since);
 }
