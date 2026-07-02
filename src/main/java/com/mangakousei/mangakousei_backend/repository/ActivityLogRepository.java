@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
 
@@ -37,4 +39,15 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
     Page<ActivityLog> findBySeriesIdOrderByCreatedAtDesc(Long seriesId, Pageable pageable);
 
     Page<ActivityLog> findByChapterIdOrderByCreatedAtDesc(Long chapterId, Pageable pageable);
+
+    @Query("""
+        SELECT a FROM ActivityLog a
+        WHERE a.user.userId = :userId
+          AND a.actionType NOT IN :excludedTypes
+        ORDER BY a.createdAt DESC
+        """)
+    List<ActivityLog> findRecentExcludingTypes(
+            @Param("userId") Long userId,
+            @Param("excludedTypes") java.util.List<String> excludedTypes,
+            org.springframework.data.domain.Pageable pageable);
 }

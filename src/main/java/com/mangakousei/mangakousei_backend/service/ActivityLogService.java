@@ -30,6 +30,7 @@ public class ActivityLogService {
 
     private final ActivityLogRepository logRepository;
     private final UserRepository        userRepository;
+    private static final List<String>   WIDGET_EXCLUDED_TYPES = List.of("LOGIN");
 
     @Async("logExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -97,7 +98,8 @@ public class ActivityLogService {
     @Transactional(readOnly = true)
     public List<ActivityLogRes> getRecentLogs() {
         Long userId = SecurityUtils.getCurrentUserId();
-        return logRepository.findTop10ByUserUserIdOrderByCreatedAtDesc(userId)
+        return logRepository
+                .findRecentExcludingTypes(userId, WIDGET_EXCLUDED_TYPES, PageRequest.of(0, 10))
                 .stream().map(this::toRes).collect(Collectors.toList());
     }
 
