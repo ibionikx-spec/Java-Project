@@ -21,6 +21,7 @@ public class UserInfoRes {
     private String avatarUrl;
     private Long editedSeries;
     private Long createdSeries;
+    private String phone;
 
     @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDateTime createdAt;

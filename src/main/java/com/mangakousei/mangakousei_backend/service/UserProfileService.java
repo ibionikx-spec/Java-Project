@@ -44,6 +44,11 @@ public class UserProfileService {
             user.setAvatarUrl(avatarUrl.isEmpty() ? null : avatarUrl);
         }
 
+        if (request.getPhone() != null) {
+            String phone = request.getPhone().trim();
+            user.setPhone(phone.isEmpty() ? null : phone);
+        }
+
         UserInfoRes result = userMapper.toDto(userRepository.save(user));
 
         activityLogService.log(LogContext.builder()
