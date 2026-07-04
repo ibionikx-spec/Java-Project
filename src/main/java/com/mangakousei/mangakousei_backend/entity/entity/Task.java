@@ -79,7 +79,7 @@ public class Task {
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("PaymentTaskId")
     @Builder.Default
-    private List<Payment> taskPayemtns = new ArrayList<>();
+    private List<Payment> taskPayments = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")

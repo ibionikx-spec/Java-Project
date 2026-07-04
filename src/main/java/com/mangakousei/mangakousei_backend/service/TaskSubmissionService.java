@@ -1,18 +1,23 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.constant.RealtimeQueues;
 import com.mangakousei.mangakousei_backend.dto.request.LogContext;
 import com.mangakousei.mangakousei_backend.dto.request.ReviewSubmissionReq;
 import com.mangakousei.mangakousei_backend.dto.request.SubmitTaskReq;
 import com.mangakousei.mangakousei_backend.dto.response.AssistantTaskRes;
+import com.mangakousei.mangakousei_backend.dto.response.TaskRes;
 import com.mangakousei.mangakousei_backend.dto.response.TaskSubmissionRes;
 import com.mangakousei.mangakousei_backend.entity.entity.*;
 import com.mangakousei.mangakousei_backend.entity.status.TaskStatus;
 import com.mangakousei.mangakousei_backend.entity.status.TaskSubmissionStatus;
 import com.mangakousei.mangakousei_backend.entity.type.ActionType;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
+import com.mangakousei.mangakousei_backend.mapper.AssistantTaskMapper;
 import com.mangakousei.mangakousei_backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskSubmissionService {
@@ -32,6 +38,8 @@ public class TaskSubmissionService {
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
     private final PaymentService paymentService;
+    private final AssistantTaskMapper assistantTaskMapper;
+    private final RealtimePushService realtimePushService;
 
     public List<AssistantTaskRes> getMyTasks(Long assistantId, String statusFilter) {
         List<Task> tasks;
@@ -41,7 +49,7 @@ public class TaskSubmissionService {
         } else {
             tasks = taskRepository.findByAssignedToUserId(assistantId);
         }
-        return tasks.stream().map(this::toAssistantTaskRes).collect(Collectors.toList());
+        return tasks.stream().map(assistantTaskMapper::toAssistantTaskRes).collect(Collectors.toList());
     }
 
     @Transactional
@@ -111,7 +119,18 @@ public class TaskSubmissionService {
                     + (series != null ? " | " + series.getTitle() : "")
                   : "Có submission mới cần review");
 
-        return toSubmissionRes(saved);
+        TaskSubmissionRes submissionRes = toSubmissionRes(saved);
+        TaskRes taskRes = toTaskRes(taskRepository.findById(task.getTaskId()).orElseThrow());
+
+        realtimePushService.pushToUser(
+                assistant.getEmail(),
+                RealtimeQueues.ASSISTANT_TASK_UPDATES,
+                assistantTaskMapper.toAssistantTaskRes(task)
+        );
+
+        realtimePushService.pushToUser(task.getAssignedBy().getEmail(), RealtimeQueues.TASK_UPDATES, taskRes);
+
+        return submissionRes;
     }
 
     public List<TaskSubmissionRes> getSubmissionsByTask(Long taskId) {
@@ -253,7 +272,37 @@ public class TaskSubmissionService {
                 .chapterId(chapter != null ? chapter.getChapterId() : null)
                 .build());
 
+        TaskRes taskRes = toTaskRes(task);
+
+        realtimePushService.pushToUser(
+                submission.getSubmittedBy().getEmail(),
+                RealtimeQueues.SUBMISSION_UPDATES,
+                result
+        );
+
+        realtimePushService.pushToUser(
+                submission.getSubmittedBy().getEmail(),
+                RealtimeQueues.ASSISTANT_TASK_UPDATES,
+                assistantTaskMapper.toAssistantTaskRes(task)
+        );
+        realtimePushService.pushToUser(mangaka.getEmail(), RealtimeQueues.TASK_UPDATES, taskRes);
+
         return result;
+    }
+
+    private TaskRes toTaskRes(Task t) {
+        return TaskRes.builder()
+                .taskId(t.getTaskId())
+                .taskTypeName(t.getTaskType() != null ? t.getTaskType().getTaskTypeName() : null)
+                .description(t.getDescription())
+                .deadline(t.getDeadline())
+                .taskStatus(t.getTaskStatus() != null ? t.getTaskStatus().getTaskStatusName() : null)
+                .assignedToId(t.getAssignedTo() != null ? t.getAssignedTo().getUserId() : null)
+                .assignedToName(t.getAssignedTo() != null ? t.getAssignedTo().getFullName() : null)
+                .assignedToAvatarUrl(t.getAssignedTo() != null ? t.getAssignedTo().getAvatarUrl() : null)
+                .createdAt(t.getCreatedAt())
+                .rate(t.getRate())
+                .build();
     }
 
     private TaskSubmissionRes toSubmissionRes(TaskSubmission s) {
@@ -279,51 +328,6 @@ public class TaskSubmissionService {
                 .taskDescription(task.getDescription())
                 .pageId(page.getPageId())
                 .pageNumber(page.getPageNumber())
-                .build();
-    }
-
-    private AssistantTaskRes toAssistantTaskRes(Task t) {
-        PageRegion region = t.getRegion();
-        Page page = region.getPage();
-        Chapter chapter = page.getChapter();
-        Series series = chapter.getSeries();
-
-        List<TaskSubmission> submissions = t.getTaskSubmissions();
-        int submissionCount = submissions != null ? submissions.size() : 0;
-        String latestStatus = null;
-        if (submissions != null && !submissions.isEmpty()) {
-            latestStatus = submissions.stream()
-                    .reduce((a, b) -> a.getSubmittedAt().isAfter(b.getSubmittedAt()) ? a : b)
-                    .map(s -> s.getTaskSubmissionStatus().getTaskSubmissionStatusName())
-                    .orElse(null);
-        }
-
-        return AssistantTaskRes.builder()
-                .taskId(t.getTaskId())
-                .taskTypeName(t.getTaskType() != null ? t.getTaskType().getTaskTypeName() : null)
-                .description(t.getDescription())
-                .deadline(t.getDeadline())
-                .taskStatus(t.getTaskStatus() != null ? t.getTaskStatus().getTaskStatusName() : null)
-                .assignedByName(t.getAssignedBy() != null ? t.getAssignedBy().getFullName() : null)
-                .assignedByAvatarUrl(t.getAssignedBy() != null ? t.getAssignedBy().getAvatarUrl() : null)
-                .regionId(region.getRegionId())
-                .regionX(region.getX())
-                .regionY(region.getY())
-                .regionWidth(region.getWidth())
-                .regionHeight(region.getHeight())
-                .regionTypeName(region.getRegionType() != null ? region.getRegionType().getRegionTypeName() : null)
-                .regionNote(region.getNote())
-                .pageId(page.getPageId())
-                .pageNumber(page.getPageNumber())
-                .pageFileUrl(page.getFileUrl())
-                .chapterId(chapter.getChapterId())
-                .chapterNumber(chapter.getChapterNumber())
-                .chapterTitle(chapter.getTitle())
-                .seriesId(series.getSeriesId())
-                .seriesTitle(series.getTitle())
-                .submissionCount(submissionCount)
-                .latestSubmissionStatus(latestStatus)
-                .createdAt(t.getCreatedAt())
                 .build();
     }
 

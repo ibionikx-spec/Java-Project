@@ -1,5 +1,6 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.constant.RealtimeQueues;
 import com.mangakousei.mangakousei_backend.dto.request.CreateRegionReq;
 import com.mangakousei.mangakousei_backend.dto.request.CreateTaskReq;
 import com.mangakousei.mangakousei_backend.dto.response.RegionRes;
@@ -9,9 +10,12 @@ import com.mangakousei.mangakousei_backend.entity.status.TaskStatus;
 import com.mangakousei.mangakousei_backend.entity.type.RegionType;
 import com.mangakousei.mangakousei_backend.entity.type.TaskType;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
+import com.mangakousei.mangakousei_backend.mapper.AssistantTaskMapper;
 import com.mangakousei.mangakousei_backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegionTaskService {
@@ -30,6 +35,9 @@ public class RegionTaskService {
     private final TaskTypeRepository taskTypeRepository;
     private final TaskStatusRepository taskStatusRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final AssistantTaskMapper assistantTaskMapper;
+    private final RealtimePushService realtimePushService;
 
     public List<RegionRes> getRegionsByPage(Long pageId) {
         return regionRepository.findByPagePageId(pageId)
@@ -91,6 +99,9 @@ public class RegionTaskService {
         regionRepository.delete(region);
     }
 
+    /**
+    * Mangaka tạo task
+    * */
     @Transactional
     public TaskRes createTask(CreateTaskReq req) {
         User mangaka = getCurrentUser();
@@ -123,7 +134,21 @@ public class RegionTaskService {
                 .taskStatus(todoStatus)
                 .build();
 
-        return toTaskRes(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+
+        notificationService.send(assistant.getUserId(), "SYSTEM",
+                "📌 Bạn có task mới",
+                mangaka.getFullName() + " vừa giao cho bạn task "
+                        + type.getTaskTypeName());
+
+
+        TaskRes res = toTaskRes(saved);
+        realtimePushService.pushToUser(
+                assistant.getEmail(),
+                RealtimeQueues.ASSISTANT_TASK_UPDATES,
+                assistantTaskMapper.toAssistantTaskRes(saved)
+        );
+        return res;
     }
 
     @Transactional
@@ -157,7 +182,19 @@ public class RegionTaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new CustomAppException(
                         "Không tìm thấy task", HttpStatus.NOT_FOUND));
+
+        String assistantEmail = task.getAssignedTo() != null ? task.getAssignedTo().getEmail() : null;
+        String taskTypeName = task.getTaskType() != null ? task.getTaskType().getTaskTypeName() : "";
+
         taskRepository.delete(task);
+
+        if (assistantEmail != null) {
+            realtimePushService.pushToUser(assistantEmail, RealtimeQueues.ASSISTANT_TASK_DELETED,taskId);
+
+            notificationService.send(task.getAssignedTo().getUserId(), "SYSTEM",
+                    "🗑️ Task đã bị xoá",
+                    "Mangaka đã xoá task " + taskTypeName + " đã giao cho bạn.");
+        }
     }
 
     private RegionRes toRegionRes(PageRegion r) {

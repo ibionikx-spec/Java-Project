@@ -1,5 +1,6 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.constant.RealtimeQueues;
 import com.mangakousei.mangakousei_backend.dto.request.InviteAssistantReq;
 import com.mangakousei.mangakousei_backend.dto.request.RespondInvitationReq;
 import com.mangakousei.mangakousei_backend.dto.response.AssistantAssignmentRes;
@@ -32,7 +33,7 @@ public class MangakaAssistantService {
     private final UserRepository userRepository;
     private final ChatService chatService;
     private final NotificationService notificationService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final RealtimePushService realtimePushService;
 
     public List<AssistantSearchRes> searchAssistants(String keyword, Long mangakaId) {
         List<User> assistants = userRepository
@@ -92,7 +93,7 @@ public class MangakaAssistantService {
                 mangaka.getFullName() + " đã mời bạn tham gia nhóm sản xuất.");
 
         AssistantAssignmentRes res = toRes(assignmentRepository.save(assignment));
-        pushAssignmentUpdate(assignment.getAssistant().getEmail(), res);
+        realtimePushService.pushToUser(assignment.getAssistant().getEmail(), RealtimeQueues.ASSIGNMENT_UPDATES, res);
 
         return res;
     }
@@ -198,18 +199,10 @@ public class MangakaAssistantService {
         assignment.setRespondedAt(LocalDateTime.now());
         AssistantAssignmentRes res = toRes(assignmentRepository.save(assignment));
 
-        pushAssignmentUpdate(assignment.getMangaka().getEmail(), res);
-        pushAssignmentUpdate(assignment.getAssistant().getEmail(), res);
+        realtimePushService.pushToUser(assignment.getMangaka().getEmail(), RealtimeQueues.ASSIGNMENT_UPDATES, res);
+        realtimePushService.pushToUser(assignment.getAssistant().getEmail(), RealtimeQueues.ASSIGNMENT_UPDATES, res);
 
         return res;
-    }
-
-    private void pushAssignmentUpdate(String userEmail, AssistantAssignmentRes payload) {
-        try {
-            messagingTemplate.convertAndSendToUser(userEmail, "/queue/assignment-updates", payload);
-        } catch (Exception e) {
-            log.warn("[Assignment][Realtime] Push thất bại cho {}: {}", userEmail, e.getMessage());
-        }
     }
 
     private User getUserById(Long id) {
@@ -236,6 +229,7 @@ public class MangakaAssistantService {
 
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assert auth != null;
         return userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new CustomAppException(
                         "User not found", HttpStatus.NOT_FOUND));
