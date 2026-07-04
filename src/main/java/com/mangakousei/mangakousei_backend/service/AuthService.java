@@ -129,6 +129,7 @@ public class AuthService {
                 .roles(userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList()))
+                .avatarUrl(customUser.getAvatarUrl())
                 .message("Token refresh successful")
                 .build();
     }

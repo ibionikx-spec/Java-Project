@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -45,10 +46,14 @@ public class SecurityConfig {
                             String authError = (String) request.getAttribute("auth_error");
                             Map<String, Object> errorResponse = new HashMap<>();
 
-                            if (authError.equals("NO_TOKEN")) {
+                            if ("NO_TOKEN".equals(authError)) {
                                 errorResponse.put("error", "NO_TOKEN");
                                 errorResponse.put("message", "Access token and refresh token invalid");
                                 errorResponse.put("shouldRefresh", false);
+                            } else {
+                                errorResponse.put("error", authError == null ? "UNAUTHORIZED" : authError);
+                                errorResponse.put("message", "Unauthorized");
+                                errorResponse.put("shouldRefresh", "TOKEN_EXPIRED".equals(authError));
                             }
 
                             response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
@@ -68,6 +73,13 @@ public class SecurityConfig {
                                 "/api/public/**",
                                 "/ws/**"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/proposals").hasAuthority("MANGAKA")
+                        .requestMatchers(HttpMethod.GET, "/api/mangaka/*/assigned-tantous").hasAnyAuthority("MANGAKA", "ADMIN")
+                        .requestMatchers("/api/mangaka/**").hasAuthority("MANGAKA")
+                        .requestMatchers("/api/tantou/**").hasAuthority("TANTOU")
+                        .requestMatchers("/api/assistant/**").hasAuthority("ASSISTANT")
+                        .requestMatchers("/api/users/**", "/api/auth/me").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
