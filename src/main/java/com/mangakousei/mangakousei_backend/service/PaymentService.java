@@ -4,8 +4,10 @@ import com.mangakousei.mangakousei_backend.dto.request.LogContext;
 import com.mangakousei.mangakousei_backend.dto.response.IncomeMonthRes;
 import com.mangakousei.mangakousei_backend.dto.response.PaymentRes;
 import com.mangakousei.mangakousei_backend.entity.entity.*;
+import com.mangakousei.mangakousei_backend.entity.status.PaymentStatus;
 import com.mangakousei.mangakousei_backend.entity.type.ActionType;
 import com.mangakousei.mangakousei_backend.repository.PaymentRepository;
+import com.mangakousei.mangakousei_backend.repository.PaymentStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class PaymentService {
     private static final BigDecimal MAX_PENALTY     = new BigDecimal("0.50");
 
     private final PaymentRepository       paymentRepository;
+    private final PaymentStatusRepository paymentStatusRepository;
     private final ActivityLogService      activityLogService;
     private final NotificationService     notificationService;
 
@@ -62,11 +65,17 @@ public class PaymentService {
         String paymentMonth = YearMonth.from(LocalDateTime.now())
                 .format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
+        PaymentStatus pendingStatus = paymentStatusRepository
+                .findByPaymentStatusName("pending")
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không tìm thấy PaymentStatus 'pending' — cần seed dữ liệu bảng payment_status"));
+
         Payment payment = Payment.builder()
                 .assistant(task.getAssignedTo())
                 .task(task)
                 .amount(amount)
                 .paymentMonth(paymentMonth)
+                .paymentStatus(pendingStatus)
                 .build();
 
         paymentRepository.save(payment);
