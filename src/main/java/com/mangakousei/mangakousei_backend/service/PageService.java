@@ -8,12 +8,15 @@ import com.mangakousei.mangakousei_backend.entity.entity.Chapter;
 import com.mangakousei.mangakousei_backend.entity.entity.ChapterPageDeadline;
 import com.mangakousei.mangakousei_backend.entity.entity.Page;
 import com.mangakousei.mangakousei_backend.entity.entity.Series;
+import com.mangakousei.mangakousei_backend.entity.entity.User;
 import com.mangakousei.mangakousei_backend.entity.status.PageStatus;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
 import com.mangakousei.mangakousei_backend.repository.ChapterPageDeadlineRepository;
 import com.mangakousei.mangakousei_backend.repository.ChapterRepository;
 import com.mangakousei.mangakousei_backend.repository.PageRepository;
 import com.mangakousei.mangakousei_backend.repository.PageStatusRepository;
+import com.mangakousei.mangakousei_backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,7 @@ public class PageService {
     private final PageStatusRepository pageStatusRepository;
     private final ChapterPageDeadlineRepository deadlineRepository;
     private final RealtimePushService realtimePushService;
+    private final UserRepository userRepository;
 
     private void notifyPageImageChanged(Page page) {
         Chapter chapter = page.getChapter();
@@ -41,6 +45,9 @@ public class PageService {
         List<ChapterPageDeadline> deadlines = deadlineRepository
                 .findByChapterChapterIdOrderByPageFrom(chapter.getChapterId());
 
+        boolean isPendingPublish = chapter.getChapterStatus() != null
+                && "pending_publish".equals(chapter.getChapterStatus().getChapterStatusName());
+
         for (ChapterPageDeadline d : deadlines) {
             if (page.getPageNumber() >= d.getPageFrom() && page.getPageNumber() <= d.getPageTo()) {
                 realtimePushService.pushToUser(
@@ -48,6 +55,16 @@ public class PageService {
                         RealtimeQueues.DEADLINE_PAGES_CHANGED,
                         d.getDeadlineId()
                 );
+
+                if (isPendingPublish) {
+                    for (User admin : userRepository.findAllByRoleName("ADMIN")) {
+                        realtimePushService.pushToUser(
+                                admin.getEmail(),
+                                RealtimeQueues.DEADLINE_PAGES_CHANGED,
+                                d.getDeadlineId()
+                        );
+                    }
+                }
             }
         }
     }

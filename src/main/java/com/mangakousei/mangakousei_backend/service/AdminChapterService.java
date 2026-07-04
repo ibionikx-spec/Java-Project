@@ -71,7 +71,7 @@ public class AdminChapterService {
                     .orElseThrow(() -> new CustomAppException(
                             "Không tìm thấy ChapterStatus 'in_progress'", HttpStatus.INTERNAL_SERVER_ERROR));
             chapter.setChapterStatus(inProgress);
-            chapter.setAdminNote(null);
+            chapter.setAdminNote(req.getNote());
             chapterRepository.save(chapter);
 
             String noteForMangaka = "[Admin yêu cầu sửa] " + (req.getNote() != null ? req.getNote() : "");
