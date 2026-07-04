@@ -22,6 +22,8 @@ import com.mangakousei.mangakousei_backend.repository.SeriesStatusRepository;
 import com.mangakousei.mangakousei_backend.repository.TantouMangakaAssignmentRepository;
 import com.mangakousei.mangakousei_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,10 +35,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class SeriesProposalService {
+    private static final String PROPOSAL_REVISION_LINK_PREFIX = "__PROPOSAL_REVISION_LINK__::";
 
     private final SeriesProposalRepository proposalRepository;
     private final GenreRepository genreRepository;
@@ -50,6 +54,7 @@ public class SeriesProposalService {
     private final PublicationScheduleRepository publicationScheduleRepository;
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
+    private final ChatService chatService;
 
     public ProposalRes createProposal(CreateProposalReq request) {
         User mangaka = getCurrentUser();
@@ -186,16 +191,40 @@ public class SeriesProposalService {
                                 currentUser.getFullName() + " vừa chuyển proposal \""
                                         + title + "\" lên chờ Admin xét duyệt."));
             }
-            case "revision" -> notificationService.send(mangakaId, "PROPOSAL",
+            case "revision" -> {
+                notificationService.send(mangakaId, "PROPOSAL",
                     "✏️ Proposal cần chỉnh sửa",
                     "Tantou yêu cầu chỉnh sửa proposal \"" + title
                             + "\": " + request.getFeedback());
+                
+                try {
+                        var conv = chatService.getOrCreateConversation(
+                                currentUser.getUserId(), proposal.getMangaka().getUserId());
+                        chatService.sendMessage(
+                                conv.getConversationId(),
+                                currentUser.getUserId(),
+                                buildRevisionLinkMessage(proposal));
+                } catch (Exception e) {
+                        log.warn("[Proposal] Gửi link chia sẻ qua chat thất bại: {}", e.getMessage());
+                }
+            }
             case "reject" -> notificationService.send(mangakaId, "PROPOSAL",
                     "❌ Proposal bị từ chối",
                     "Tantou đã từ chối proposal \"" + title
                             + "\". Lý do: " + request.getReason());
         }
     }
+
+    private String buildRevisionLinkMessage(SeriesProposal proposal) {
+    try {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("proposalId", proposal.getProposalId());
+        payload.put("workingTitle", proposal.getWorkingTitle());
+        return PROPOSAL_REVISION_LINK_PREFIX + new ObjectMapper().writeValueAsString(payload);
+    } catch (Exception e) {
+        return "✏️ Tantou yêu cầu chỉnh sửa bản ý tưởng \"" + proposal.getWorkingTitle() + "\"";
+    }
+}
 
     @Transactional
     public Map<String, Object> adminReviewProposal(Long proposalId, ReviewProposalReq request) {
