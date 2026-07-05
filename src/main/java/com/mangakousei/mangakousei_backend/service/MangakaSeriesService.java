@@ -4,6 +4,7 @@ import com.mangakousei.mangakousei_backend.dto.request.UpdateSeriesReq;
 import com.mangakousei.mangakousei_backend.dto.response.MangakaSeriesRes;
 import com.mangakousei.mangakousei_backend.entity.entity.Chapter;
 import com.mangakousei.mangakousei_backend.entity.entity.Genre;
+import com.mangakousei.mangakousei_backend.entity.entity.Page;
 import com.mangakousei.mangakousei_backend.entity.entity.PublicationSchedule;
 import com.mangakousei.mangakousei_backend.entity.entity.Series;
 import com.mangakousei.mangakousei_backend.exception.CustomAppException;
@@ -13,10 +14,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +34,89 @@ public class MangakaSeriesService {
     private final GenreRepository genreRepository;
     private final ChapterRepository chapterRepository;
     private final ChapterPageDeadlineRepository deadlineRepository;
+    private final PageRepository pageRepository;
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    public byte[] downloadAllFiles(Long seriesId, Long mangakaId) {
+        Series series = seriesRepository
+                .findBySeriesIdAndCreatorUserId(seriesId, mangakaId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy series hoặc bạn không có quyền truy cập",
+                        HttpStatus.NOT_FOUND));
+
+        List<Chapter> chapters = chapterRepository
+                .findBySeriesSeriesIdOrderByChapterNumberAsc(seriesId);
+
+        if (chapters.isEmpty()) {
+            throw new CustomAppException(
+                    "Series chưa có chapter nào để tải", HttpStatus.BAD_REQUEST);
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        boolean hasAnyFile = false;
+
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (Chapter chapter : chapters) {
+                List<Page> pages = pageRepository
+                        .findByChapterChapterIdOrderByPageNumberAsc(chapter.getChapterId());
+
+                String folderName = "Chapter_" + chapter.getChapterNumber()
+                        + (chapter.getTitle() != null && !chapter.getTitle().isBlank()
+                            ? "_" + sanitizeFileName(chapter.getTitle())
+                            : "");
+
+                for (Page page : pages) {
+                    String fileUrl = page.getFileUrl();
+                    if (fileUrl == null || fileUrl.isBlank()) continue;
+
+                    try {
+                        byte[] imageBytes = downloadBytes(fileUrl);
+                        String ext = extractExtension(fileUrl);
+                        String entryName = folderName + "/page_"
+                                + String.format("%03d", page.getPageNumber())
+                                + "." + ext;
+
+                        zos.putNextEntry(new ZipEntry(entryName));
+                        zos.write(imageBytes);
+                        zos.closeEntry();
+                        hasAnyFile = true;
+                    } catch (IOException e) {
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new CustomAppException(
+                    "Lỗi khi tạo file zip", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        if (!hasAnyFile) {
+            throw new CustomAppException(
+                    "Series chưa có ảnh trang nào để tải", HttpStatus.BAD_REQUEST);
+        }
+
+        return baos.toByteArray();
+    }
+
+    private byte[] downloadBytes(String fileUrl) throws IOException {
+        URL url = new URL(fileUrl);
+        try (InputStream in = url.openStream()) {
+            return in.readAllBytes();
+        }
+    }
+
+    private String extractExtension(String fileUrl) {
+        String path = fileUrl.split("\\?")[0];
+        int dotIdx = path.lastIndexOf('.');
+        if (dotIdx == -1 || dotIdx == path.length() - 1) return "jpg";
+        String ext = path.substring(dotIdx + 1).toLowerCase();
+        return ext.length() <= 5 ? ext : "jpg";
+    }
+
+    private String sanitizeFileName(String name) {
+        return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+    }
 
     public List<MangakaSeriesRes> getSeriesByMangaka(Long mangakaId) {
         List<Series> seriesList =
