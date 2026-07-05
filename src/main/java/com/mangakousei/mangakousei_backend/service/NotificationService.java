@@ -108,6 +108,24 @@ public class NotificationService {
         notificationRepository.markOneReadByIdAndUserId(notificationId, userId);
     }
 
+    @Transactional
+    public void deleteOne(Long notificationId) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Notification notif = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy thông báo", HttpStatus.NOT_FOUND));
+        if (!notif.getUser().getUserId().equals(userId)) {
+            throw new CustomAppException("Không có quyền", HttpStatus.FORBIDDEN);
+        }
+        notificationRepository.deleteByIdAndUserId(notificationId, userId);
+    }
+
+    @Transactional
+    public void deleteAll() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        notificationRepository.deleteAllByUserId(userId);
+    }
+
     private NotificationRes toRes(Notification n) {
         return NotificationRes.builder()
                 .notificationId(n.getNotificationId())

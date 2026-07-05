@@ -23,6 +23,18 @@ public class NotificationController {
                 "OK", notificationService.getMyNotifications()));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteOne(@PathVariable Long id) {
+        notificationService.deleteOne(id);
+        return ResponseEntity.ok(ApiResponse.success("Đã xoá thông báo", null));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<Void>> deleteAll() {
+        notificationService.deleteAll();
+        return ResponseEntity.ok(ApiResponse.success("Đã xoá tất cả thông báo", null));
+    }
+
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Map<String, Long>>> countUnread() {
         long count = notificationService.countUnread();
