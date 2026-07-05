@@ -62,6 +62,8 @@ public class TantouSeriesService {
                 .coverImageUrl(s.getCoverImageUrl())
                 .seriesStatus(s.getSeriesStatus() != null
                         ? s.getSeriesStatus().getSeriesStatusName() : null)
+                .mangakaId(s.getCreator() != null
+                        ? s.getCreator().getUserId() : null)
                 .mangakaName(s.getCreator() != null
                         ? s.getCreator().getFullName() : null)
                 .mangakaAvatarUrl(s.getCreator() != null
