@@ -23,6 +23,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
 @Service
 @RequiredArgsConstructor
 public class ChapterService {
@@ -35,6 +42,80 @@ public class ChapterService {
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
     private final RealtimePushService realtimePushService;
+    private final PageRepository pageRepository;
+
+    public byte[] downloadChapterFiles(Long chapterId) {
+        User mangaka = getCurrentUser();
+
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy chapter", HttpStatus.NOT_FOUND));
+
+        Series series = chapter.getSeries();
+        if (series == null || series.getCreator() == null
+                || !series.getCreator().getUserId().equals(mangaka.getUserId())) {
+            throw new CustomAppException(
+                    "Bạn không có quyền tải file chapter này", HttpStatus.FORBIDDEN);
+        }
+
+        List<Page> pages = pageRepository
+                .findByChapterChapterIdOrderByPageNumberAsc(chapterId);
+
+        if (pages.isEmpty()) {
+            throw new CustomAppException(
+                    "Chapter chưa có trang nào để tải", HttpStatus.BAD_REQUEST);
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        boolean hasAnyFile = false;
+
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (Page page : pages) {
+                String fileUrl = page.getFileUrl();
+                if (fileUrl == null || fileUrl.isBlank()) continue;
+
+                try {
+                    byte[] imageBytes = downloadBytes(fileUrl);
+                    String ext = extractExtension(fileUrl);
+                    String entryName = "page_"
+                            + String.format("%03d", page.getPageNumber())
+                            + "." + ext;
+
+                    zos.putNextEntry(new ZipEntry(entryName));
+                    zos.write(imageBytes);
+                    zos.closeEntry();
+                    hasAnyFile = true;
+                } catch (IOException e) {
+                        //
+                }
+            }
+        } catch (IOException e) {
+            throw new CustomAppException(
+                    "Lỗi khi tạo file zip", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        if (!hasAnyFile) {
+            throw new CustomAppException(
+                    "Chapter chưa có ảnh trang nào để tải", HttpStatus.BAD_REQUEST);
+        }
+
+        return baos.toByteArray();
+    }
+
+    private byte[] downloadBytes(String fileUrl) throws IOException {
+        URL url = new URL(fileUrl);
+        try (InputStream in = url.openStream()) {
+            return in.readAllBytes();
+        }
+    }
+
+    private String extractExtension(String fileUrl) {
+        String path = fileUrl.split("\\?")[0];
+        int dotIdx = path.lastIndexOf('.');
+        if (dotIdx == -1 || dotIdx == path.length() - 1) return "jpg";
+        String ext = path.substring(dotIdx + 1).toLowerCase();
+        return ext.length() <= 5 ? ext : "jpg";
+    }
 
     public List<ChapterRes> getChaptersBySeries(Long seriesId) {
         return chapterRepository

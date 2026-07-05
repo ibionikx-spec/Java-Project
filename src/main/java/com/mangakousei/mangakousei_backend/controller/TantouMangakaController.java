@@ -16,6 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
 @RestController
 @RequestMapping("/api/mangaka")
 @RequiredArgsConstructor
@@ -72,5 +75,19 @@ public class TantouMangakaController {
         Long mangakaId = SecurityUtils.getCurrentUserId();
         MangakaSeriesRes result = mangakaSeriesService.updateSeries(seriesId, mangakaId, req);
         return ResponseEntity.ok(ApiResponse.success("Series đã được cập nhật", result));
+    }
+
+    @GetMapping("/series/{seriesId}/download-all")
+    public ResponseEntity<byte[]> downloadAllFiles(@PathVariable Long seriesId) {
+        Long mangakaId = SecurityUtils.getCurrentUserId();
+        byte[] zipBytes = mangakaSeriesService.downloadAllFiles(seriesId, mangakaId);
+
+        String filename = "series-" + seriesId + "-files.zip";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(zipBytes);
     }
 }

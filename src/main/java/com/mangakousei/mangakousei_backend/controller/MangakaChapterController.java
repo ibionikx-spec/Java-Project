@@ -9,7 +9,10 @@ import com.mangakousei.mangakousei_backend.service.ChapterService;
 import com.mangakousei.mangakousei_backend.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,5 +50,21 @@ public class MangakaChapterController {
         }
         PageDeadlineRes result = chapterService.submitPageGroup(deadlineId);
         return ResponseEntity.ok(ApiResponse.success("Đã đánh dấu nộp trang", result));
+    }
+
+    @GetMapping("/chapters/{chapterId}/download-all")
+    public ResponseEntity<byte[]> downloadChapterFiles(@PathVariable Long chapterId) {
+        if (!SecurityUtils.isMangaka()) {
+            throw new CustomAppException("Không có quyền", HttpStatus.FORBIDDEN);
+        }
+        byte[] zipBytes = chapterService.downloadChapterFiles(chapterId);
+
+        String filename = "chapter-" + chapterId + "-files.zip";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(zipBytes);
     }
 }
