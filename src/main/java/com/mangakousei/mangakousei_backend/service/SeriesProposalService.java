@@ -3,6 +3,7 @@ package com.mangakousei.mangakousei_backend.service;
 import com.mangakousei.mangakousei_backend.dto.request.CreateProposalReq;
 import com.mangakousei.mangakousei_backend.dto.request.LogContext;
 import com.mangakousei.mangakousei_backend.dto.request.ReviewProposalReq;
+import com.mangakousei.mangakousei_backend.dto.request.UpdateProposalReq;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalListRes;
 import com.mangakousei.mangakousei_backend.dto.response.ProposalRes;
 import com.mangakousei.mangakousei_backend.entity.entity.*;
@@ -34,6 +35,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -110,6 +112,134 @@ public class SeriesProposalService {
                         + saved.getWorkingTitle() + "\" – hãy xem xét và phản hồi.");
 
         return new ProposalRes(saved.getProposalId(), saved.getStatus());
+    }
+
+    public ProposalListRes getMyProposalDetail(Long proposalId) {
+        User mangaka = getCurrentUser();
+
+        SeriesProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy proposal", HttpStatus.NOT_FOUND));
+
+        if (!proposal.getMangaka().getUserId().equals(mangaka.getUserId())) {
+                throw new CustomAppException(
+                        "Bạn không có quyền xem proposal này", HttpStatus.FORBIDDEN);
+        }
+
+        return toProposalListRes(proposal);
+        }
+
+    @Transactional
+        public ProposalListRes updateProposal(Long proposalId, UpdateProposalReq request) {
+        User mangaka = getCurrentUser();
+
+        SeriesProposal proposal = proposalRepository.findById(proposalId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy proposal", HttpStatus.NOT_FOUND));
+
+        if (!proposal.getMangaka().getUserId().equals(mangaka.getUserId())) {
+                throw new CustomAppException(
+                        "Bạn không có quyền sửa proposal này", HttpStatus.FORBIDDEN);
+        }
+
+        if (!"revision".equals(proposal.getStatus())) {
+                throw new CustomAppException(
+                        "Chỉ có thể sửa proposal đang ở trạng thái 'revision'", HttpStatus.BAD_REQUEST);
+        }
+
+        proposal.setWorkingTitle(request.getWorkingTitle());
+        proposal.setSynopsis(request.getSynopsis());
+        proposal.setTargetAudience(request.getTargetAudience());
+        proposal.setNameSummary(request.getNameSummary());
+        
+        if (request.getSketchImageUrl() != null && !request.getSketchImageUrl().isBlank()) {
+                proposal.setSketchImageUrl(request.getSketchImageUrl());
+        }
+
+        proposal.getProposalGenres().clear();
+        for (Long genreId : request.getGenreIds()) {
+                Genre genre = genreRepository.findById(genreId)
+                        .orElseThrow(() -> new CustomAppException(
+                                "Genre not found: " + genreId, HttpStatus.BAD_REQUEST));
+                proposal.addGenre(genre);
+        }
+
+        proposal.getProposalCharacters().clear();
+        
+        for (CreateProposalReq.CharacterDto dto : request.getCharacters()) {
+                ProposalCharacter character = ProposalCharacter.builder()
+                        .characterName(dto.getCharacterName())
+                        .role(dto.getRole())
+                        .description(dto.getDescription())
+                        .build();
+                proposal.addCharacter(character);
+        }
+
+        proposal.setStatus("pending");
+        proposal.setRevisionFeedback(null);
+        proposal.setReviewedBy(null);
+        proposal.setDecidedAt(null);
+        proposal.setUpdatedAt(LocalDateTime.now());
+
+        SeriesProposal saved = proposalRepository.save(proposal);
+        
+        activityLogService.log(LogContext.builder()
+                .actionType(ActionType.CREATE_PROPOSAL)
+                .detail("Mangaka nộp lại proposal \"" + saved.getWorkingTitle() + "\" sau khi chỉnh sửa")
+                .entityType("PROPOSAL")
+                .entityId(saved.getProposalId())
+                .build());
+
+        if (saved.getAssignedTantou() != null) {
+                notificationService.send(saved.getAssignedTantou().getUserId(), "PROPOSAL",
+                        "🔄 Proposal đã được nộp lại",
+                        mangaka.getFullName() + " đã chỉnh sửa và nộp lại proposal \""
+                                + saved.getWorkingTitle() + "\" -- hãy xem xét lại.");
+        }
+        return toProposalListRes(saved);
+        }
+
+    private ProposalListRes toProposalListRes(SeriesProposal p) {
+        ProposalListRes.MangakaInfo mangakaInfo = new ProposalListRes.MangakaInfo();
+        mangakaInfo.setUserId(p.getMangaka().getUserId());
+        mangakaInfo.setFullName(p.getMangaka().getFullName());
+        mangakaInfo.setAvatarUrl(p.getMangaka().getAvatarUrl());
+
+        List<ProposalListRes.GenreInfo> genres = p.getProposalGenres().stream()
+                .map(pg -> {
+                        ProposalListRes.GenreInfo gi = new ProposalListRes.GenreInfo();
+                        gi.setGenreId(pg.getGenre().getGenreId());
+                        gi.setName(pg.getGenre().getGenreName());
+                        return gi;
+                })
+                .collect(Collectors.toList());
+
+        List<ProposalListRes.CharacterInfo> characters = p.getProposalCharacters().stream()
+                .map(pc -> {
+                        ProposalListRes.CharacterInfo ci = new ProposalListRes.CharacterInfo();
+                        ci.setCharacterId(pc.getCharacterId());
+                        ci.setCharacterName(pc.getCharacterName());
+                        ci.setRole(pc.getRole());
+                        ci.setDescription(pc.getDescription());
+                        return ci;
+                })
+                .collect(Collectors.toList());
+
+        return ProposalListRes.builder()
+                .proposalId(p.getProposalId())
+                .workingTitle(p.getWorkingTitle())
+                .synopsis(p.getSynopsis())
+                .targetAudience(p.getTargetAudience())
+                .status(p.getStatus())
+                .createdAt(p.getCreatedAt())
+                .nameSummary(p.getNameSummary())
+                .rejectionReason(p.getRejectionReason())
+                .revisionFeedback(p.getRevisionFeedback())
+                .sketchImageUrl(p.getSketchImageUrl())
+                .mangaka(mangakaInfo)
+                .genres(genres)
+                .characters(characters)
+        .build();
     }
 
     public List<ProposalListRes> getAdminPendingProposals() {
