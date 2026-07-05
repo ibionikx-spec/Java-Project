@@ -249,6 +249,7 @@ public class SeriesProposalService {
     }
 
     private void pushProposalUpdate(SeriesProposal proposal) {
+        if (proposal.getMangaka() == null) return;
         ProposalListRes payload = toProposalListRes(proposal);
 
         if (proposal.getMangaka() != null) {
