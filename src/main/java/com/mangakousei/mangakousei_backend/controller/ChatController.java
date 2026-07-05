@@ -74,6 +74,13 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success("Conversation started", conv));
     }
 
+    @PostMapping("/conversations/start/mangaka/{mangakaId}")
+    public ResponseEntity<?> startConversationWithMangaka(@PathVariable Long mangakaId) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        ConversationRes conv = chatService.startConversationWithMangaka(userId, mangakaId);
+        return ResponseEntity.ok(ApiResponse.success("Conversation started", conv));
+    }
+
     @PostMapping("/backfill")
     public ResponseEntity<?> backfillConversations() {
         if (!SecurityUtils.isAdmin()) {

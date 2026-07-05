@@ -73,6 +73,21 @@ public class ChatService {
     }
 
     @Transactional
+    public ConversationRes startConversationWithMangaka(Long tantouId, Long mangakaId) {
+        boolean isAssigned = tantouMangakaAssignmentRepository
+                .findByTantou_UserIdAndMangaka_UserIdAndIsActiveTrue(tantouId, mangakaId)
+                .isPresent();
+
+        if (!isAssigned) {
+            throw new CustomAppException(
+                    "Bạn không được phân công phụ trách Mangaka này", HttpStatus.FORBIDDEN);
+        }
+
+        Conversation conv = getOrCreateConversation(tantouId, mangakaId);
+        return toConversationRes(conv, tantouId);
+    }
+
+    @Transactional
     public ConversationRes startConversationWithAdmin(Long currentUserId, Long adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new CustomAppException("Không tìm thấy Admin", HttpStatus.NOT_FOUND));

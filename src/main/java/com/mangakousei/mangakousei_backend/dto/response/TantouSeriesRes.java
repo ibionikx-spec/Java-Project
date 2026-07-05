@@ -24,4 +24,6 @@ public class TantouSeriesRes {
 
     private long totalPageDeadlines;
     private long submittedPageDeadlines;
+
+    private Long mangakaId;
 }
