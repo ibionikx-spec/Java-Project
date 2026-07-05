@@ -58,4 +58,10 @@ public final class RealtimeQueues {
      * Báo rằng ảnh của 1 hoặc nhiều trang thuộc 1 PageDeadline vừa thay đổi
      */
     public static final String DEADLINE_PAGES_CHANGED = "/queue/deadline-pages-changed";
+
+    /**
+     * Proposal (bản Name) được tạo mới / đổi trạng thái ở bất kỳ bước nào
+     * (Mangaka tạo, Tantou duyệt, Admin duyệt, reopen, cancel-approve...).
+     */
+    public static final String PROPOSAL_UPDATES = "/queue/proposal-updates";
 }

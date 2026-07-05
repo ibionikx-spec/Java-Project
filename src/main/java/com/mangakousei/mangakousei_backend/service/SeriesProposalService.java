@@ -1,5 +1,6 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.constant.RealtimeQueues;
 import com.mangakousei.mangakousei_backend.dto.request.CreateProposalReq;
 import com.mangakousei.mangakousei_backend.dto.request.LogContext;
 import com.mangakousei.mangakousei_backend.dto.request.ReviewProposalReq;
@@ -57,6 +58,7 @@ public class SeriesProposalService {
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
     private final ChatService chatService;
+    private final RealtimePushService realtimePushService;
 
     public ProposalRes createProposal(CreateProposalReq request) {
         User mangaka = getCurrentUser();
@@ -110,6 +112,8 @@ public class SeriesProposalService {
                 "📋 Proposal mới cần xem xét",
                 mangaka.getFullName() + " vừa gửi proposal \""
                         + saved.getWorkingTitle() + "\" – hãy xem xét và phản hồi.");
+
+        pushProposalUpdate(saved);
 
         return new ProposalRes(saved.getProposalId(), saved.getStatus());
     }
@@ -196,8 +200,10 @@ public class SeriesProposalService {
                         mangaka.getFullName() + " đã chỉnh sửa và nộp lại proposal \""
                                 + saved.getWorkingTitle() + "\" -- hãy xem xét lại.");
         }
+
+        pushProposalUpdate(saved);
         return toProposalListRes(saved);
-        }
+    }
 
     private ProposalListRes toProposalListRes(SeriesProposal p) {
         ProposalListRes.MangakaInfo mangakaInfo = new ProposalListRes.MangakaInfo();
@@ -240,6 +246,24 @@ public class SeriesProposalService {
                 .genres(genres)
                 .characters(characters)
         .build();
+    }
+
+    private void pushProposalUpdate(SeriesProposal proposal) {
+        ProposalListRes payload = toProposalListRes(proposal);
+
+        if (proposal.getMangaka() != null) {
+                realtimePushService.pushToUser(proposal.getMangaka().getEmail(),
+                        RealtimeQueues.PROPOSAL_UPDATES, payload);
+        }
+
+        if (proposal.getAssignedTantou() != null) {
+                realtimePushService.pushToUser(proposal.getAssignedTantou().getEmail(),
+                        RealtimeQueues.PROPOSAL_UPDATES, payload);
+        }
+
+        userRepository.findAllByRoleName("ADMIN").forEach(admin ->
+                realtimePushService.pushToUser(admin.getEmail(),
+                        RealtimeQueues.PROPOSAL_UPDATES, payload));
     }
 
     public List<ProposalListRes> getAdminPendingProposals() {
@@ -299,6 +323,7 @@ public class SeriesProposalService {
             case "reject"    -> "Tantou từ chối";
             default          -> request.getDecision();
         };
+        
         activityLogService.log(LogContext.builder()
                 .actionType(ActionType.REVIEW_PROPOSAL)
                 .detail(decisionLabel + " proposal \"" + proposal.getWorkingTitle() + "\"")
@@ -343,6 +368,7 @@ public class SeriesProposalService {
                     "Tantou đã từ chối proposal \"" + title
                             + "\". Lý do: " + request.getReason());
         }
+        pushProposalUpdate(proposal);
     }
 
     private String buildRevisionLinkMessage(SeriesProposal proposal) {
@@ -391,6 +417,8 @@ public class SeriesProposalService {
                               "Proposal \"" + proposal.getWorkingTitle() + "\" đã được Admin duyệt.");
                 }
 
+                pushProposalUpdate(proposal);
+
                 return Map.of(
                         "proposalId", proposal.getProposalId(),
                         "status", "approved_pending_schedule"
@@ -424,6 +452,8 @@ public class SeriesProposalService {
                               "Proposal \"" + proposal.getWorkingTitle() + "\" của Mangaka bạn quản lý cần được chỉnh sửa. Phản hồi từ Admin: " + request.getFeedback());
                 }
 
+                pushProposalUpdate(proposal);
+
                 return Map.of(
                         "proposalId", proposal.getProposalId(),
                         "status", "revision"
@@ -455,6 +485,8 @@ public class SeriesProposalService {
                               "Proposal \"" + proposal.getWorkingTitle() + "\" của Mangaka bạn quản lý đã bị Admin từ chối.");
                 }
 
+                pushProposalUpdate(proposal);
+
                 return Map.of(
                         "proposalId", proposal.getProposalId(),
                         "status", "rejected"
@@ -479,6 +511,8 @@ public class SeriesProposalService {
         proposal.setDecidedAt(null);
         proposal.setUpdatedAt(LocalDateTime.now());
         proposalRepository.save(proposal);
+
+        pushProposalUpdate(proposal);
     }
 
     private User getCurrentUser() {
@@ -553,6 +587,8 @@ public class SeriesProposalService {
         proposal.setStatus("pending_admin");
         proposal.setUpdatedAt(LocalDateTime.now());
         proposalRepository.save(proposal);
+
+        pushProposalUpdate(proposal);
     }
 
     @Transactional
