@@ -11,4 +11,10 @@ public interface ReaderVoteRepository extends JpaRepository<ReaderVote, Long> {
 
     @Query("SELECT COALESCE(AVG(v.surveyScore), 0) FROM ReaderVote v WHERE v.series.seriesId = :seriesId AND v.surveyScore IS NOT NULL")
     double averageScoreBySeriesId(@Param("seriesId") Long seriesId);
+
+    @Query("SELECT COALESCE(SUM(v.salesCount), 0) FROM ReaderVote v WHERE v.series.seriesId = :seriesId")
+    long sumSalesBySeriesId(@Param("seriesId") Long seriesId);
+
+    @Query("SELECT COALESCE(SUM(v.commentCount), 0) FROM ReaderVote v WHERE v.series.seriesId = :seriesId")
+    long sumCommentsBySeriesId(@Param("seriesId") Long seriesId);
 }
