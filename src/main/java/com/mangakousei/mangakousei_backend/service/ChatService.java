@@ -1,5 +1,6 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.constant.RealtimeQueues;
 import com.mangakousei.mangakousei_backend.dto.response.AdminContactRes;
 import com.mangakousei.mangakousei_backend.dto.response.ChatMessageRes;
 import com.mangakousei.mangakousei_backend.dto.response.ConversationRes;
@@ -17,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +36,7 @@ public class ChatService {
     private final ConversationRepository conversationRepository;
     private final ChatMessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final RealtimePushService realtimePushService;
     private final TantouMangakaAssignmentRepository tantouMangakaAssignmentRepository;
     private final MangakaAssistantAssignmentRepository mangakaAssistantAssignmentRepository;
 
@@ -184,8 +184,8 @@ public class ChatService {
                 ? conv.getParticipantB().getEmail()
                 : conv.getParticipantA().getEmail();
 
-        pushRealtime(sender.getEmail(), payload);
-        pushRealtime(otherEmail, payload);
+        realtimePushService.pushToUser(sender.getEmail(), RealtimeQueues.MESSAGES, payload);
+        realtimePushService.pushToUser(otherEmail, RealtimeQueues.MESSAGES, payload);
 
         return payload;
     }
@@ -244,14 +244,6 @@ public class ChatService {
 
     private boolean hasRole(User user, String roleName) {
         return user.getRoles().stream().anyMatch(r -> roleName.equals(r.getRoleName()));
-    }
-
-    private void pushRealtime(String userEmail, ChatMessageRes payload) {
-        try {
-            messagingTemplate.convertAndSendToUser(userEmail, "/queue/messages", payload);
-        } catch (Exception e) {
-            log.warn("[Chat][Realtime] Push thất bại cho {}: {}", userEmail, e.getMessage());
-        }
     }
 
     private String truncate(String s) {

@@ -1,5 +1,6 @@
 package com.mangakousei.mangakousei_backend.service;
 
+import com.mangakousei.mangakousei_backend.constant.RealtimeQueues;
 import com.mangakousei.mangakousei_backend.dto.response.NotificationRes;
 import com.mangakousei.mangakousei_backend.entity.entity.Notification;
 import com.mangakousei.mangakousei_backend.entity.entity.User;
@@ -12,7 +13,6 @@ import com.mangakousei.mangakousei_backend.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -30,7 +30,7 @@ public class NotificationService {
     private final NotificationTypeRepository notificationTypeRepository;
     private final UserRepository userRepository;
 
-    private final SimpMessagingTemplate messagingTemplate;
+    private final RealtimePushService realtimePushService;
 
     @Async("logExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -55,22 +55,10 @@ public class NotificationService {
 
             notificationRepository.save(notif);
 
-            pushRealtime(user.getEmail(), toRes(notif));
+            realtimePushService.pushToUser(user.getEmail(), RealtimeQueues.NOTIFICATIONS, toRes(notif));
 
         } catch (Exception e) {
             log.warn("[Notification] Gửi thông báo thất bại (userId={}): {}", recipientId, e.getMessage());
-        }
-    }
-
-    private void pushRealtime(String userEmail, NotificationRes payload) {
-        try {
-            messagingTemplate.convertAndSendToUser(
-                    userEmail,
-                    "/queue/notifications",
-                    payload
-            );
-        } catch (Exception e) {
-            log.warn("[Notification][Realtime] Push thất bại cho {}: {}", userEmail, e.getMessage());
         }
     }
 
@@ -106,6 +94,24 @@ public class NotificationService {
             throw new CustomAppException("Không có quyền", HttpStatus.FORBIDDEN);
         }
         notificationRepository.markOneReadByIdAndUserId(notificationId, userId);
+    }
+
+    @Transactional
+    public void deleteOne(Long notificationId) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Notification notif = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new CustomAppException(
+                        "Không tìm thấy thông báo", HttpStatus.NOT_FOUND));
+        if (!notif.getUser().getUserId().equals(userId)) {
+            throw new CustomAppException("Không có quyền", HttpStatus.FORBIDDEN);
+        }
+        notificationRepository.deleteByIdAndUserId(notificationId, userId);
+    }
+
+    @Transactional
+    public void deleteAll() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        notificationRepository.deleteAllByUserId(userId);
     }
 
     private NotificationRes toRes(Notification n) {

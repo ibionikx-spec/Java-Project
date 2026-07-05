@@ -1,6 +1,7 @@
 package com.mangakousei.mangakousei_backend.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -14,6 +15,8 @@ public class NotificationRes {
     private String title;
     private String message;
     private String notificationType;
+
+    @JsonProperty("isRead")
     private boolean isRead;
 
     @JsonFormat(pattern = "dd/MM/yyyy, HH:mm")
