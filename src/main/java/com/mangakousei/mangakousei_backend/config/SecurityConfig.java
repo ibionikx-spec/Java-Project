@@ -75,6 +75,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/proposals").hasAuthority("MANGAKA")
+                        .requestMatchers(HttpMethod.GET, "/api/proposals/*").hasAuthority("MANGAKA")
+                        .requestMatchers(HttpMethod.PUT, "/api/proposals/*").hasAuthority("MANGAKA")
                         .requestMatchers(HttpMethod.GET, "/api/mangaka/*/assigned-tantous").hasAnyAuthority("MANGAKA", "ADMIN")
                         .requestMatchers("/api/mangaka/**").hasAuthority("MANGAKA")
                         .requestMatchers("/api/tantou/**").hasAuthority("TANTOU")
