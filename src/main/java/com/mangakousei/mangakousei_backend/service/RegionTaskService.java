@@ -226,6 +226,20 @@ public class RegionTaskService {
                 .assignedToName(t.getAssignedTo() != null ? t.getAssignedTo().getFullName() : null)
                 .assignedToAvatarUrl(t.getAssignedTo() != null ? t.getAssignedTo().getAvatarUrl() : null)
                 .createdAt(t.getCreatedAt())
+                .rate(t.getRate())
+                .attachments(t.getAttachments() != null
+                        ? t.getAttachments().stream().map(a -> com.mangakousei.mangakousei_backend.dto.response.TaskAttachmentRes.builder()
+                                .attachmentId(a.getAttachmentId())
+                                .taskId(t.getTaskId())
+                                .fileUrl(a.getFileUrl())
+                                .fileName(a.getFileName())
+                                .fileType(a.getFileType())
+                                .uploadedById(a.getUploadedBy() != null ? a.getUploadedBy().getUserId() : null)
+                                .uploadedByName(a.getUploadedBy() != null ? a.getUploadedBy().getFullName() : null)
+                                .createdAt(a.getCreatedAt())
+                                .build())
+                        .toList()
+                        : List.of())
                 .build();
     }
 

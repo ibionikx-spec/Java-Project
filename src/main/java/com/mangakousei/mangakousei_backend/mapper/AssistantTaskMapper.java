@@ -49,6 +49,19 @@ public class AssistantTaskMapper {
                 .seriesTitle(series.getTitle())
                 .submissionCount(submissionCount)
                 .latestSubmissionStatus(latestStatus)
+                .attachments(t.getAttachments() != null
+                        ? t.getAttachments().stream().map(a -> com.mangakousei.mangakousei_backend.dto.response.TaskAttachmentRes.builder()
+                                .attachmentId(a.getAttachmentId())
+                                .taskId(t.getTaskId())
+                                .fileUrl(a.getFileUrl())
+                                .fileName(a.getFileName())
+                                .fileType(a.getFileType())
+                                .uploadedById(a.getUploadedBy() != null ? a.getUploadedBy().getUserId() : null)
+                                .uploadedByName(a.getUploadedBy() != null ? a.getUploadedBy().getFullName() : null)
+                                .createdAt(a.getCreatedAt())
+                                .build())
+                        .toList()
+                        : List.of())
                 .createdAt(t.getCreatedAt())
                 .build();
     }
