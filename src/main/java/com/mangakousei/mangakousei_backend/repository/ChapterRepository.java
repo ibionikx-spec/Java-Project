@@ -1,7 +1,11 @@
 package com.mangakousei.mangakousei_backend.repository;
 
 import com.mangakousei.mangakousei_backend.entity.entity.Chapter;
+
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -41,4 +45,8 @@ public interface ChapterRepository extends JpaRepository<Chapter, Long> {
     long countByEditorUserId(@Param("editorId") Long editorId);
 
     long countByChapterStatusChapterStatusName(String statusName);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Chapter c WHERE c.chapterId = :id")
+    Optional<Chapter> findByIdForUpdate(@Param("id") Long id);
 }

@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class AssistantTaskRes {
@@ -40,8 +39,6 @@ public class AssistantTaskRes {
 
     private int submissionCount;
     private String latestSubmissionStatus;
-
-    private List<TaskAttachmentRes> attachments;
 
     private LocalDateTime createdAt;
 }

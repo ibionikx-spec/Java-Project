@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class TaskRes {
@@ -24,5 +23,4 @@ public class TaskRes {
     private LocalDateTime createdAt;
 
     private BigDecimal rate;
-    private List<TaskAttachmentRes> attachments;
 }
