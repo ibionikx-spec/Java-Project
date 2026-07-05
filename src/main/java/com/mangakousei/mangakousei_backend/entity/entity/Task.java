@@ -81,11 +81,6 @@ public class Task {
     @Builder.Default
     private List<Payment> taskPayments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference("TaskAttachment")
-    @Builder.Default
-    private List<TaskAttachment> attachments = new ArrayList<>();
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
     @JsonBackReference("AssistantAssignedTasks")

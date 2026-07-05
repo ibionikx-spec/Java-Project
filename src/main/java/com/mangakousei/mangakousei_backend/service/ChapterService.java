@@ -247,7 +247,9 @@ public class ChapterService {
         deadline.setReviewNote(null);
         deadlineRepository.save(deadline);
 
-        Chapter chapter = deadline.getChapter();
+        Chapter chapter = chapterRepository.findByIdForUpdate(deadline.getChapter().getChapterId())
+        .orElseThrow(() -> new CustomAppException("Không tìm thấy chapter", HttpStatus.NOT_FOUND));
+        
         List<ChapterPageDeadline> chapterDeadlines = deadlineRepository
                 .findByChapterChapterIdOrderByPageFrom(chapter.getChapterId());
         boolean allReadyForReview = !chapterDeadlines.isEmpty()
