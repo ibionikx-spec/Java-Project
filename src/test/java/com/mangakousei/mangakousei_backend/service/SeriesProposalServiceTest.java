@@ -48,6 +48,7 @@ class SeriesProposalServiceTest {
     @Mock private PublicationScheduleRepository publicationScheduleRepository;
     @Mock private ActivityLogService activityLogService;
     @Mock private NotificationService notificationService;
+    @Mock private RealtimePushService realtimePushService;
 
     @InjectMocks
     private SeriesProposalService seriesProposalService;
@@ -71,6 +72,8 @@ class SeriesProposalServiceTest {
                 .passwordHash("hashed")
                 .build();
 
+        lenient().when(userRepository.findAllByRoleName("ADMIN")).thenReturn(List.of());
+
         CustomUserDetails userDetails = new CustomUserDetails(
                 1L, "mangaka@test.com", "hashed", "Mangaka Test", null,
                 List.of(new SimpleGrantedAuthority("MANGAKA"))
@@ -93,6 +96,7 @@ class SeriesProposalServiceTest {
         SeriesProposal saved = SeriesProposal.builder()
                 .proposalId(10L)
                 .status("pending")
+                .mangaka(mockMangaka)
                 .build();
         when(proposalRepository.save(any())).thenReturn(saved);
 
