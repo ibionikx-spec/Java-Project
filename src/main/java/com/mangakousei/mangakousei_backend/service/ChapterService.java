@@ -476,6 +476,16 @@ public class ChapterService {
                     "Bạn không có quyền submit chapter này", HttpStatus.FORBIDDEN);
         }
 
+        String currentStatus = chapter.getChapterStatus() != null
+                ? chapter.getChapterStatus().getChapterStatusName() : "";
+        boolean isFirstSubmit = "pages_submitted".equals(currentStatus);
+        boolean isResubmitAfterAdminRevision =
+                "pending_publish".equals(currentStatus) && chapter.getAdminNote() != null;
+        if (!isFirstSubmit && !isResubmitAfterAdminRevision) {
+            throw new CustomAppException(
+                    "Chapter cannot be submitted in its current status", HttpStatus.BAD_REQUEST);
+        }
+
 //        String currentStatus = chapter.getChapterStatus() != null
 //                ? chapter.getChapterStatus().getChapterStatusName() : "";
 //
